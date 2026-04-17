@@ -1,105 +1,82 @@
 
-# Phase 1: Core UI Foundation & Navigation
+# Phase 2: Inventory Management Interface (Part 1 — List, Filters, Search)
 
-Establishing the foundation for Inventory Pulse: design system, navigation shell, onboarding, and dashboard layout.
+Build out the `/inventory` screen with a real, interactive list backed by mock data. CRUD forms, item details, and analytics come in subsequent slices of Phase 2.
 
-## What we'll build
+## What we'll build in this slice
 
-### 1. Design system (src/styles.css)
-Replace the default slate theme with the Inventory Pulse palette using OKLCH:
-- **Primary (Fresh Green)**: #10B981
-- **Warning (Near Expiry)**: #F59E0B
-- **Destructive (Urgent)**: #EF4444
-- Clean white/gray neutrals
-- Add semantic tokens: `--fresh`, `--warning`, `--urgent` (plus foregrounds) so freshness indicators are reusable across the app
-- Inter font for headings (loaded via Google Fonts in `__root.tsx`), system fonts for body
-- Mobile-first sizing, larger default touch targets
+### 1. Mock data layer (`src/lib/inventory-data.ts`)
+- `InventoryItem` type: `id`, `name`, `category`, `quantity`, `unit`, `expiresAt` (ISO string), `addedAt`, `imageUrl?`, `location` (Fridge / Pantry / Freezer)
+- `Category` enum-like union: Produce, Dairy, Meat, Bakery, Pantry, Beverages, Frozen, Other
+- `getFreshnessLevel(expiresAt)` helper → returns `"fresh" | "warning" | "urgent" | "expired"` based on days until expiry (>5 fresh, 2–5 warning, 0–1 urgent, <0 expired)
+- `getDaysUntilExpiry(expiresAt)` helper
+- ~16 realistic mock items spanning all categories and freshness levels
 
-### 2. Routing structure (file-based, TanStack Router)
-Create route files in `src/routes/`:
-- `index.tsx` → redirect to `/dashboard` (or `/welcome` if not onboarded)
-- `welcome.tsx` → onboarding carousel
-- `dashboard.tsx` → main home
-- `inventory.tsx` → placeholder list
-- `scanner.tsx` → placeholder
-- `recipes.tsx` → placeholder
-- `more.tsx` → hub for Shopping, Analytics, Settings, Profile
+### 2. FreshnessBadge update
+- Add `"expired"` level (red, "Expired") so list rows can show overdue items consistently with the rest of the design system
 
-Later phases add `inventory.add.tsx`, `inventory.$id.tsx`, `recipes.$id.tsx`, `auth.tsx`, etc.
+### 3. Inventory list components (`src/components/inventory/`)
+- `InventoryItemCard.tsx` — single row: thumbnail circle (icon by category), name, quantity + unit, location, FreshnessBadge with relative expiry text ("in 3 days", "today", "2 days ago"). Tap target ≥ 64px height, full-width tappable.
+- `InventoryFilters.tsx` — horizontally scrollable chip row: All, Fresh, Near expiry, Urgent, Expired, plus category chips. Single active chip highlighted with primary color.
+- `InventorySearch.tsx` — search input with leading icon and clear button, controlled value.
+- `InventorySortMenu.tsx` — dropdown (using existing `dropdown-menu`): Expiry (soonest), Name (A–Z), Recently added.
+- `InventoryEmptyState.tsx` — shown when no items match filters; different copy for "no items at all" vs "no matches".
 
-### 3. App shell with bottom tab navigation
-- New `src/components/layout/AppShell.tsx` wrapping `<Outlet />` with:
-  - Top header (page title + notification bell)
-  - Bottom tab bar fixed at viewport bottom (Dashboard, Inventory, Scanner, Recipes, More)
-  - Scanner tab visually elevated (center FAB style)
-  - Active tab uses primary green; uses `<Link activeProps>` from `@tanstack/react-router`
-- Mounted inside `__root.tsx` so it wraps all routes except `/welcome` and (future) `/auth`
-- Hidden on `/welcome` via a small route-aware check
+### 4. Inventory route (`src/routes/inventory.tsx`)
+Replace the placeholder with a real screen:
+- `PageHeader` with title "Inventory" and a primary "+ Add" button (links to `/scanner` for now; `/inventory/add` arrives in the next slice)
+- Search input
+- Filter chip row (freshness + category)
+- Sort menu + result count ("12 items")
+- List of `InventoryItemCard`s
+- Empty state when filtered list is empty
+- All filter / search / sort state stored in **URL search params** via TanStack Router + Zod adapter, so filters survive refresh and are shareable
 
-### 4. Reusable UI primitives (src/components/ui-app/)
-Built on top of existing shadcn components:
-- `FreshnessBadge` — pill showing Fresh/Near/Urgent with semantic color
-- `FreshnessGauge` — circular SVG progress gauge for the dashboard
-- `StatCard` — number + label + trend
-- `QuickActionButton` — large icon button for dashboard CTAs
-- `PageHeader` — consistent page title + optional action
-
-### 5. Onboarding (`/welcome`)
-- 3-slide carousel (using existing `components/ui/carousel.tsx`):
-  1. Track inventory effortlessly
-  2. Get smart expiry alerts
-  3. AI recipes from what you have
-- Dot progress indicators, swipe gestures (Embla built-in), Skip + Next/Get Started CTA
-- On completion, set `localStorage.inventory-pulse:onboarded = true` and navigate to `/dashboard`
-- `index.tsx` checks this flag and redirects accordingly
-
-### 6. Dashboard layout (`/dashboard`)
-Placeholder structure ready for later phases:
-- Greeting header ("Good morning")
-- Large `FreshnessGauge` (mock data: 12 fresh, 4 near, 2 urgent)
-- 3 `StatCard`s (Total items, Expiring soon, Saved this month)
-- Quick actions row: Scan, Add Manually, View Recipes
-- "Expiring soon" preview list (mock 3 items)
-- Notifications bell in header
+### 5. Search-param schema
+Using `zodValidator` + `fallback`:
+- `q: string` (default "")
+- `freshness: "all" | "fresh" | "warning" | "urgent" | "expired"` (default "all")
+- `category: string` (default "all")
+- `sort: "expiry" | "name" | "recent"` (default "expiry")
 
 ## Technical details
 
-- **Routing**: TanStack Start file-based routing; flat dot-separated naming. No edits to `routeTree.gen.ts`.
-- **Navigation**: All `<Link>` from `@tanstack/react-router`, no `react-router-dom`.
-- **Active state**: `activeProps={{ className: "text-primary" }}` on tab links.
-- **Conditional shell**: Use `useRouterState({ select: s => s.location.pathname })` in `__root.tsx` to skip the shell on `/welcome`.
-- **Onboarding gate**: client-only check inside `index.tsx` component (using `useEffect` + `useNavigate`) since localStorage isn't SSR-safe.
-- **Per-route metadata**: Each new route defines its own `head()` with title + description + og tags.
-- **Fonts**: Add `<link>` to Inter via `links` array in root route's `head()`.
-- **No backend yet**: All data is mock/local. Auth and Supabase come in Phase 5/6.
-- **No PWA manifest/service worker yet**: kept for Phase 8 to avoid caching half-built UI during development.
+- **Routing**: stays a leaf route `/inventory`; only `validateSearch` is added. No edits to `routeTree.gen.ts`.
+- **State**: filters/search/sort live in URL via `useNavigate({ from: "/inventory" })` + functional `search` updaters so existing params are preserved.
+- **Filtering/sorting**: pure functions in `src/lib/inventory-data.ts` (`filterItems`, `sortItems`) — easy to unit test and replace with Supabase queries in Phase 6.
+- **Performance**: list is plain `.map()` (≤16 mock items). Virtualization deferred until real data volumes justify it.
+- **Icons**: category → `lucide-react` icon map (Apple, Milk, Beef, Croissant, Package, CupSoda, Snowflake, Box).
+- **Accessibility**: every chip is a `<button>`; search input has a visible label via `aria-label`; cards are `<button>` elements (will become links to `/inventory/:id` in next slice).
+- **Design tokens only** — uses `bg-primary`, `text-muted-foreground`, `bg-fresh/10`, etc. No hard-coded colors.
+
+## Dependencies to install
+
+- `@tanstack/zod-adapter` — type-safe search-param validation (zod itself is already required transitively; install both to be explicit)
+- `zod`
 
 ## File diagram
 
 ```text
 src/
   routes/
-    __root.tsx           (updated: fonts, conditional AppShell)
-    index.tsx            (replaced: onboarding gate redirect)
-    welcome.tsx          (new)
-    dashboard.tsx        (new)
-    inventory.tsx        (new, placeholder)
-    scanner.tsx          (new, placeholder)
-    recipes.tsx          (new, placeholder)
-    more.tsx             (new, placeholder)
+    inventory.tsx                 (replaced)
   components/
-    layout/
-      AppShell.tsx       (new)
-      BottomTabBar.tsx   (new)
-      TopHeader.tsx      (new)
+    inventory/
+      InventoryItemCard.tsx       (new)
+      InventoryFilters.tsx        (new)
+      InventorySearch.tsx         (new)
+      InventorySortMenu.tsx       (new)
+      InventoryEmptyState.tsx     (new)
     ui-app/
-      FreshnessBadge.tsx
-      FreshnessGauge.tsx
-      StatCard.tsx
-      QuickActionButton.tsx
-      PageHeader.tsx
-  styles.css             (updated: brand palette + semantic tokens)
+      FreshnessBadge.tsx          (updated: + "expired" level)
+  lib/
+    inventory-data.ts             (new: types, mock data, helpers)
 ```
 
-## Out of scope (later phases)
-- Real inventory CRUD, scanner camera, recipes, auth, Supabase, AI, PWA service worker.
+## Out of scope (next slices of Phase 2)
+- Add / Edit forms (`/inventory/add`, `/inventory/edit/:id`)
+- Item detail page (`/inventory/:id`) with timeline
+- Image upload
+- Pull-to-refresh
+- Persisting changes (still mock; CRUD comes with Supabase in Phase 6)
+- Dedicated analytics screen (basic stats already on dashboard)
