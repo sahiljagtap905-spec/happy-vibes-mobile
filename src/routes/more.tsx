@@ -23,8 +23,8 @@ export const Route = createFileRoute("/more")({
 
 const items: Array<{ to: string; label: string; description: string; icon: LucideIcon }> = [
   { to: "/more", label: "Shopping list", description: "Auto-generated and manual items", icon: ShoppingCart },
-  { to: "/more", label: "Analytics", description: "Waste, savings, and trends", icon: BarChart3 },
-  { to: "/more", label: "Notifications", description: "Manage alerts", icon: Bell },
+  { to: "/analytics", label: "Analytics", description: "Waste, savings, and trends", icon: BarChart3 },
+  { to: "/notifications", label: "Notifications", description: "Manage alerts", icon: Bell },
   { to: "/more", label: "Settings", description: "Preferences and modes", icon: Settings },
   { to: "/more", label: "Profile", description: "Your account", icon: User },
 ];

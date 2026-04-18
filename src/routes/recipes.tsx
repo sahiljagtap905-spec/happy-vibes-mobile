@@ -33,7 +33,7 @@ function RecipesPage() {
   const navigate = useNavigate({ from: "/recipes" });
 
   const update = (next: Partial<{ q: string; tag: string; business: boolean }>) =>
-    navigate({ search: (prev) => ({ ...prev, ...next }) });
+    navigate({ search: (prev: { q: string; tag: string; business: boolean }) => ({ ...prev, ...next }) });
 
   const filtered = MOCK_RECIPES.filter((r) => {
     if (business && r.timeMinutes > 15) return false;
