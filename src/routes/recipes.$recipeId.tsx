@@ -10,7 +10,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/recipes/$recipeId")({
-  loader: ({ params }) => {
+import { getRecipeById, type Recipe } from "@/lib/recipes-data";
+
+export const Route = createFileRoute("/recipes/$recipeId")({
+  loader: ({ params }): { recipe: Recipe } => {
     const recipe = getRecipeById(params.recipeId);
     if (!recipe) throw notFound();
     return { recipe };
