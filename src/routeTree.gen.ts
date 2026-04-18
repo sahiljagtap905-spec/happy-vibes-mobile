@@ -12,10 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as ScannerRouteImport } from './routes/scanner'
 import { Route as RecipesRouteImport } from './routes/recipes'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MoreRouteImport } from './routes/more'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RecipesRecipeIdRouteImport } from './routes/recipes.$recipeId'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -30,6 +33,11 @@ const ScannerRoute = ScannerRouteImport.update({
 const RecipesRoute = RecipesRouteImport.update({
   id: '/recipes',
   path: '/recipes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MoreRoute = MoreRouteImport.update({
@@ -47,76 +55,106 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecipesRecipeIdRoute = RecipesRecipeIdRouteImport.update({
+  id: '/$recipeId',
+  path: '/$recipeId',
+  getParentRoute: () => RecipesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/dashboard': typeof DashboardRoute
   '/inventory': typeof InventoryRoute
   '/more': typeof MoreRoute
-  '/recipes': typeof RecipesRoute
+  '/notifications': typeof NotificationsRoute
+  '/recipes': typeof RecipesRouteWithChildren
   '/scanner': typeof ScannerRoute
   '/welcome': typeof WelcomeRoute
+  '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/dashboard': typeof DashboardRoute
   '/inventory': typeof InventoryRoute
   '/more': typeof MoreRoute
-  '/recipes': typeof RecipesRoute
+  '/notifications': typeof NotificationsRoute
+  '/recipes': typeof RecipesRouteWithChildren
   '/scanner': typeof ScannerRoute
   '/welcome': typeof WelcomeRoute
+  '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/dashboard': typeof DashboardRoute
   '/inventory': typeof InventoryRoute
   '/more': typeof MoreRoute
-  '/recipes': typeof RecipesRoute
+  '/notifications': typeof NotificationsRoute
+  '/recipes': typeof RecipesRouteWithChildren
   '/scanner': typeof ScannerRoute
   '/welcome': typeof WelcomeRoute
+  '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/analytics'
     | '/dashboard'
     | '/inventory'
     | '/more'
+    | '/notifications'
     | '/recipes'
     | '/scanner'
     | '/welcome'
+    | '/recipes/$recipeId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/analytics'
     | '/dashboard'
     | '/inventory'
     | '/more'
+    | '/notifications'
     | '/recipes'
     | '/scanner'
     | '/welcome'
+    | '/recipes/$recipeId'
   id:
     | '__root__'
     | '/'
+    | '/analytics'
     | '/dashboard'
     | '/inventory'
     | '/more'
+    | '/notifications'
     | '/recipes'
     | '/scanner'
     | '/welcome'
+    | '/recipes/$recipeId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AnalyticsRoute: typeof AnalyticsRoute
   DashboardRoute: typeof DashboardRoute
   InventoryRoute: typeof InventoryRoute
   MoreRoute: typeof MoreRoute
-  RecipesRoute: typeof RecipesRoute
+  NotificationsRoute: typeof NotificationsRoute
+  RecipesRoute: typeof RecipesRouteWithChildren
   ScannerRoute: typeof ScannerRoute
   WelcomeRoute: typeof WelcomeRoute
 }
@@ -144,6 +182,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RecipesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/more': {
       id: '/more'
       path: '/more'
@@ -165,6 +210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -172,15 +224,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/recipes/$recipeId': {
+      id: '/recipes/$recipeId'
+      path: '/$recipeId'
+      fullPath: '/recipes/$recipeId'
+      preLoaderRoute: typeof RecipesRecipeIdRouteImport
+      parentRoute: typeof RecipesRoute
+    }
   }
 }
 
+interface RecipesRouteChildren {
+  RecipesRecipeIdRoute: typeof RecipesRecipeIdRoute
+}
+
+const RecipesRouteChildren: RecipesRouteChildren = {
+  RecipesRecipeIdRoute: RecipesRecipeIdRoute,
+}
+
+const RecipesRouteWithChildren =
+  RecipesRoute._addFileChildren(RecipesRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AnalyticsRoute: AnalyticsRoute,
   DashboardRoute: DashboardRoute,
   InventoryRoute: InventoryRoute,
   MoreRoute: MoreRoute,
-  RecipesRoute: RecipesRoute,
+  NotificationsRoute: NotificationsRoute,
+  RecipesRoute: RecipesRouteWithChildren,
   ScannerRoute: ScannerRoute,
   WelcomeRoute: WelcomeRoute,
 }
