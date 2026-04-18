@@ -5,12 +5,9 @@ import { PageHeader } from "@/components/ui-app/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getRecipeById } from "@/lib/recipes-data";
+import { getRecipeById, type Recipe } from "@/lib/recipes-data";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-
-export const Route = createFileRoute("/recipes/$recipeId")({
-import { getRecipeById, type Recipe } from "@/lib/recipes-data";
 
 export const Route = createFileRoute("/recipes/$recipeId")({
   loader: ({ params }): { recipe: Recipe } => {
