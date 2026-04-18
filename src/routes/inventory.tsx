@@ -52,7 +52,7 @@ function InventoryPage() {
   const isFiltered = q !== "" || freshness !== "all" || category !== "all";
 
   const update = (patch: Partial<{ q: string; freshness: FreshnessFilter; category: string; sort: SortKey }>) => {
-    navigate({ search: (prev) => ({ ...prev, ...patch }) });
+    navigate({ search: (prev: Record<string, unknown>) => ({ ...prev, ...patch }) });
   };
 
   return (
