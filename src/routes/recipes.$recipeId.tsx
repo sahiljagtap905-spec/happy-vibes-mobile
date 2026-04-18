@@ -33,7 +33,7 @@ export const Route = createFileRoute("/recipes/$recipeId")({
 });
 
 function RecipeDetail() {
-  const data = Route.useLoaderData();
+  const data = Route.useLoaderData() as { recipe: Recipe };
   const recipe = data.recipe;
   const [checked, setChecked] = useState<Record<number, boolean>>({});
   const [currentStep, setCurrentStep] = useState(0);
