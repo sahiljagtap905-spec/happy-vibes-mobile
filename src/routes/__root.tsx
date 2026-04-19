@@ -1,14 +1,25 @@
 import {
   Outlet,
   Link,
-  createRootRoute,
+  createRootRouteWithContext,
   HeadContent,
   Scripts,
   useRouterState,
+  useNavigate,
 } from "@tanstack/react-router";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
 import { AppShell } from "@/components/layout/AppShell";
+import { Toaster } from "@/components/ui/sonner";
+import { useAuth } from "@/hooks/useAuth";
+
+interface RouterContext {
+  queryClient: QueryClient;
+}
+
+const PUBLIC_ROUTES = ["/welcome", "/auth", "/reset-password", "/"];
 
 function NotFoundComponent() {
   return (
@@ -32,39 +43,25 @@ function NotFoundComponent() {
   );
 }
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      {
-        name: "viewport",
-        content: "width=device-width, initial-scale=1, viewport-fit=cover",
-      },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#10B981" },
       { title: "Inventory Pulse — Smart Kitchen Management" },
       {
         name: "description",
-        content:
-          "AI-powered kitchen inventory tracker. Reduce food waste with smart expiry alerts and recipe suggestions.",
+        content: "AI-powered kitchen inventory tracker. Reduce food waste with smart expiry alerts and recipe suggestions.",
       },
-      { name: "author", content: "Inventory Pulse" },
       { property: "og:title", content: "Inventory Pulse — Smart Kitchen Management" },
-      {
-        property: "og:description",
-        content:
-          "AI-powered kitchen inventory tracker. Reduce food waste with smart expiry alerts and recipe suggestions.",
-      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      {
-        rel: "preconnect",
-        href: "https://fonts.gstatic.com",
-        crossOrigin: "anonymous",
-      },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap",
@@ -91,9 +88,37 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function RootComponent() {
+  const { queryClient } = Route.useRouteContext();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppContent />
+      <Toaster />
+    </QueryClientProvider>
+  );
+}
+
+function AppContent() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const bareRoutes = ["/welcome", "/auth"];
-  const isBare = bareRoutes.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  const isPublic = PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  const isBare = pathname === "/welcome" || pathname === "/auth" || pathname === "/reset-password";
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user && !isPublic) {
+      navigate({ to: "/auth", search: { redirect: pathname }, replace: true });
+    }
+  }, [user, loading, isPublic, pathname, navigate]);
+
+  if (loading && !isPublic) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
+      </div>
+    );
+  }
 
   if (isBare) {
     return <Outlet />;
