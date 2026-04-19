@@ -10,9 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ScannerRouteImport } from './routes/scanner'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RecipesRouteImport } from './routes/recipes'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MoreRouteImport } from './routes/more'
 import { Route as InventoryRouteImport } from './routes/inventory'
@@ -25,6 +27,11 @@ import { Route as RecipesRecipeIdRouteImport } from './routes/recipes.$recipeId'
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
   path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ScannerRoute = ScannerRouteImport.update({
@@ -40,6 +47,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const RecipesRoute = RecipesRouteImport.update({
   id: '/recipes',
   path: '/recipes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -91,9 +103,11 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof InventoryRoute
   '/more': typeof MoreRoute
   '/notifications': typeof NotificationsRoute
+  '/profile': typeof ProfileRoute
   '/recipes': typeof RecipesRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/scanner': typeof ScannerRoute
+  '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
@@ -105,9 +119,11 @@ export interface FileRoutesByTo {
   '/inventory': typeof InventoryRoute
   '/more': typeof MoreRoute
   '/notifications': typeof NotificationsRoute
+  '/profile': typeof ProfileRoute
   '/recipes': typeof RecipesRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/scanner': typeof ScannerRoute
+  '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
@@ -120,9 +136,11 @@ export interface FileRoutesById {
   '/inventory': typeof InventoryRoute
   '/more': typeof MoreRoute
   '/notifications': typeof NotificationsRoute
+  '/profile': typeof ProfileRoute
   '/recipes': typeof RecipesRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
   '/scanner': typeof ScannerRoute
+  '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
@@ -136,9 +154,11 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/more'
     | '/notifications'
+    | '/profile'
     | '/recipes'
     | '/reset-password'
     | '/scanner'
+    | '/settings'
     | '/welcome'
     | '/recipes/$recipeId'
   fileRoutesByTo: FileRoutesByTo
@@ -150,9 +170,11 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/more'
     | '/notifications'
+    | '/profile'
     | '/recipes'
     | '/reset-password'
     | '/scanner'
+    | '/settings'
     | '/welcome'
     | '/recipes/$recipeId'
   id:
@@ -164,9 +186,11 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/more'
     | '/notifications'
+    | '/profile'
     | '/recipes'
     | '/reset-password'
     | '/scanner'
+    | '/settings'
     | '/welcome'
     | '/recipes/$recipeId'
   fileRoutesById: FileRoutesById
@@ -179,9 +203,11 @@ export interface RootRouteChildren {
   InventoryRoute: typeof InventoryRoute
   MoreRoute: typeof MoreRoute
   NotificationsRoute: typeof NotificationsRoute
+  ProfileRoute: typeof ProfileRoute
   RecipesRoute: typeof RecipesRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   ScannerRoute: typeof ScannerRoute
+  SettingsRoute: typeof SettingsRoute
   WelcomeRoute: typeof WelcomeRoute
 }
 
@@ -192,6 +218,13 @@ declare module '@tanstack/react-router' {
       path: '/welcome'
       fullPath: '/welcome'
       preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/scanner': {
@@ -213,6 +246,13 @@ declare module '@tanstack/react-router' {
       path: '/recipes'
       fullPath: '/recipes'
       preLoaderRoute: typeof RecipesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -293,11 +333,22 @@ const rootRouteChildren: RootRouteChildren = {
   InventoryRoute: InventoryRoute,
   MoreRoute: MoreRoute,
   NotificationsRoute: NotificationsRoute,
+  ProfileRoute: ProfileRoute,
   RecipesRoute: RecipesRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   ScannerRoute: ScannerRoute,
+  SettingsRoute: SettingsRoute,
   WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
