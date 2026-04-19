@@ -1,15 +1,27 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Clock, Users, Sparkles, Zap, Search } from "lucide-react";
+import { Clock, Users, Sparkles, Zap, Search, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
+import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui-app/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { MOCK_RECIPES, ALL_TAGS } from "@/lib/recipes-data";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+interface RecipeRow {
+  id: string;
+  title: string;
+  description: string;
+  image_emoji: string | null;
+  time_minutes: number;
+  servings: number;
+  difficulty: string;
+  tags: string[];
+}
 
 const searchSchema = z.object({
   q: fallback(z.string(), "").default(""),
@@ -32,11 +44,22 @@ function RecipesPage() {
   const { q, tag, business } = Route.useSearch();
   const navigate = useNavigate({ from: "/recipes" });
 
+  const { data: recipes = [], isLoading } = useQuery({
+    queryKey: ["recipes"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("recipes").select("*").order("title");
+      if (error) throw error;
+      return data as RecipeRow[];
+    },
+  });
+
+  const allTags = Array.from(new Set(recipes.flatMap((r) => r.tags))).sort();
+
   const update = (next: Partial<{ q: string; tag: string; business: boolean }>) =>
     navigate({ search: (prev: { q: string; tag: string; business: boolean }) => ({ ...prev, ...next }) });
 
-  const filtered = MOCK_RECIPES.filter((r) => {
-    if (business && r.timeMinutes > 15) return false;
+  const filtered = recipes.filter((r) => {
+    if (business && r.time_minutes > 15) return false;
     if (tag !== "all" && !r.tags.includes(tag)) return false;
     if (q && !r.title.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
@@ -113,59 +136,48 @@ function RecipesPage() {
         </span>
       </button>
 
-      <div className="-mx-4 overflow-x-auto px-4">
-        <div className="flex gap-2 pb-1">
-          <TagChip active={tag === "all"} onClick={() => update({ tag: "all" })}>
-            All
-          </TagChip>
-          {ALL_TAGS.map((t) => (
-            <TagChip key={t} active={tag === t} onClick={() => update({ tag: t })}>
-              {t}
-            </TagChip>
-          ))}
-        </div>
-      </div>
+      {isLoading ? (
+        <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : (
+        <>
+          <div className="-mx-4 overflow-x-auto px-4">
+            <div className="flex gap-2 pb-1">
+              <TagChip active={tag === "all"} onClick={() => update({ tag: "all" })}>All</TagChip>
+              {allTags.map((t) => (
+                <TagChip key={t} active={tag === t} onClick={() => update({ tag: t })}>{t}</TagChip>
+              ))}
+            </div>
+          </div>
 
-      <p className="text-xs font-medium text-muted-foreground">
-        {filtered.length} {filtered.length === 1 ? "recipe" : "recipes"}
-      </p>
+          <p className="text-xs font-medium text-muted-foreground">
+            {filtered.length} {filtered.length === 1 ? "recipe" : "recipes"}
+          </p>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {filtered.map((r) => (
-          <Link
-            key={r.id}
-            to="/recipes/$recipeId"
-            params={{ recipeId: r.id }}
-            className="block"
-          >
-            <Card className="flex h-full gap-3 p-3 transition-colors hover:bg-muted/40">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-muted text-3xl">
-                {r.imageEmoji}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-foreground">{r.title}</p>
-                <p className="line-clamp-2 text-xs text-muted-foreground">{r.description}</p>
-                <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> {r.timeMinutes} min
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Users className="h-3 w-3" /> {r.servings}
-                  </span>
-                  <Badge variant="secondary" className="ml-auto text-[10px]">
-                    {r.difficulty}
-                  </Badge>
-                </div>
-              </div>
-            </Card>
-          </Link>
-        ))}
-      </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {filtered.map((r) => (
+              <Link key={r.id} to="/recipes/$recipeId" params={{ recipeId: r.id }} className="block">
+                <Card className="flex h-full gap-3 p-3 transition-colors hover:bg-muted/40">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-muted text-3xl">
+                    {r.image_emoji ?? "🍽️"}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">{r.title}</p>
+                    <p className="line-clamp-2 text-xs text-muted-foreground">{r.description}</p>
+                    <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {r.time_minutes} min</span>
+                      <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" /> {r.servings}</span>
+                      <Badge variant="secondary" className="ml-auto text-[10px]">{r.difficulty}</Badge>
+                    </div>
+                  </div>
+                </Card>
+              </Link>
+            ))}
+          </div>
 
-      {filtered.length === 0 && (
-        <Card className="p-8 text-center text-sm text-muted-foreground">
-          No recipes match your filters.
-        </Card>
+          {filtered.length === 0 && (
+            <Card className="p-8 text-center text-sm text-muted-foreground">No recipes match your filters.</Card>
+          )}
+        </>
       )}
     </div>
   );
