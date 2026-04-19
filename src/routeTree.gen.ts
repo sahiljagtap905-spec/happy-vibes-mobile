@@ -10,12 +10,16 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ScannerRouteImport } from './routes/scanner'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RecipesRouteImport } from './routes/recipes'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MoreRouteImport } from './routes/more'
 import { Route as InventoryRouteImport } from './routes/inventory'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RecipesRecipeIdRouteImport } from './routes/recipes.$recipeId'
@@ -25,14 +29,29 @@ const WelcomeRoute = WelcomeRouteImport.update({
   path: '/welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScannerRoute = ScannerRouteImport.update({
   id: '/scanner',
   path: '/scanner',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecipesRoute = RecipesRouteImport.update({
   id: '/recipes',
   path: '/recipes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -55,6 +74,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalyticsRoute = AnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -74,24 +98,32 @@ const RecipesRecipeIdRoute = RecipesRecipeIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
+  '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/inventory': typeof InventoryRoute
   '/more': typeof MoreRoute
   '/notifications': typeof NotificationsRoute
+  '/profile': typeof ProfileRoute
   '/recipes': typeof RecipesRouteWithChildren
+  '/reset-password': typeof ResetPasswordRoute
   '/scanner': typeof ScannerRoute
+  '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
+  '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/inventory': typeof InventoryRoute
   '/more': typeof MoreRoute
   '/notifications': typeof NotificationsRoute
+  '/profile': typeof ProfileRoute
   '/recipes': typeof RecipesRouteWithChildren
+  '/reset-password': typeof ResetPasswordRoute
   '/scanner': typeof ScannerRoute
+  '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
@@ -99,12 +131,16 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
+  '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/inventory': typeof InventoryRoute
   '/more': typeof MoreRoute
   '/notifications': typeof NotificationsRoute
+  '/profile': typeof ProfileRoute
   '/recipes': typeof RecipesRouteWithChildren
+  '/reset-password': typeof ResetPasswordRoute
   '/scanner': typeof ScannerRoute
+  '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
@@ -113,36 +149,48 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/analytics'
+    | '/auth'
     | '/dashboard'
     | '/inventory'
     | '/more'
     | '/notifications'
+    | '/profile'
     | '/recipes'
+    | '/reset-password'
     | '/scanner'
+    | '/settings'
     | '/welcome'
     | '/recipes/$recipeId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/analytics'
+    | '/auth'
     | '/dashboard'
     | '/inventory'
     | '/more'
     | '/notifications'
+    | '/profile'
     | '/recipes'
+    | '/reset-password'
     | '/scanner'
+    | '/settings'
     | '/welcome'
     | '/recipes/$recipeId'
   id:
     | '__root__'
     | '/'
     | '/analytics'
+    | '/auth'
     | '/dashboard'
     | '/inventory'
     | '/more'
     | '/notifications'
+    | '/profile'
     | '/recipes'
+    | '/reset-password'
     | '/scanner'
+    | '/settings'
     | '/welcome'
     | '/recipes/$recipeId'
   fileRoutesById: FileRoutesById
@@ -150,12 +198,16 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AnalyticsRoute: typeof AnalyticsRoute
+  AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
   InventoryRoute: typeof InventoryRoute
   MoreRoute: typeof MoreRoute
   NotificationsRoute: typeof NotificationsRoute
+  ProfileRoute: typeof ProfileRoute
   RecipesRoute: typeof RecipesRouteWithChildren
+  ResetPasswordRoute: typeof ResetPasswordRoute
   ScannerRoute: typeof ScannerRoute
+  SettingsRoute: typeof SettingsRoute
   WelcomeRoute: typeof WelcomeRoute
 }
 
@@ -168,6 +220,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WelcomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/scanner': {
       id: '/scanner'
       path: '/scanner'
@@ -175,11 +234,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScannerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/recipes': {
       id: '/recipes'
       path: '/recipes'
       fullPath: '/recipes'
       preLoaderRoute: typeof RecipesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -208,6 +281,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analytics': {
@@ -248,23 +328,18 @@ const RecipesRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AnalyticsRoute: AnalyticsRoute,
+  AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
   InventoryRoute: InventoryRoute,
   MoreRoute: MoreRoute,
   NotificationsRoute: NotificationsRoute,
+  ProfileRoute: ProfileRoute,
   RecipesRoute: RecipesRouteWithChildren,
+  ResetPasswordRoute: ResetPasswordRoute,
   ScannerRoute: ScannerRoute,
+  SettingsRoute: SettingsRoute,
   WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

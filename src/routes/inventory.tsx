@@ -12,12 +12,14 @@ import { InventoryItemCard } from "@/components/inventory/InventoryItemCard";
 import { InventoryEmptyState } from "@/components/inventory/InventoryEmptyState";
 import {
   CATEGORIES,
-  MOCK_INVENTORY,
   filterItems,
   sortItems,
   type FreshnessFilter,
   type SortKey,
 } from "@/lib/inventory-data";
+import { useAuth } from "@/hooks/useAuth";
+import { useInventory } from "@/hooks/useInventory";
+import { Loader2 } from "lucide-react";
 
 const searchSchema = z.object({
   q: fallback(z.string(), "").default(""),
@@ -43,10 +45,12 @@ export const Route = createFileRoute("/inventory")({
 function InventoryPage() {
   const { q, freshness, category, sort } = Route.useSearch();
   const navigate = useNavigate({ from: "/inventory" });
+  const { user } = useAuth();
+  const { data: rawItems = [], isLoading } = useInventory(user?.id);
 
   const items = useMemo(
-    () => sortItems(filterItems(MOCK_INVENTORY, { q, freshness, category }), sort),
-    [q, freshness, category, sort],
+    () => sortItems(filterItems(rawItems, { q, freshness, category }), sort),
+    [rawItems, q, freshness, category, sort],
   );
 
   const isFiltered = q !== "" || freshness !== "all" || category !== "all";
@@ -88,7 +92,11 @@ function InventoryPage() {
         <InventorySortMenu value={sort} onChange={(v) => update({ sort: v })} />
       </div>
 
-      {items.length === 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center py-10">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : items.length === 0 ? (
         <InventoryEmptyState
           filtered={isFiltered}
           onReset={() => update({ q: "", freshness: "all", category: "all" })}

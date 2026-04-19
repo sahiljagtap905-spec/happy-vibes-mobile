@@ -1,32 +1,33 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  ShoppingCart,
   BarChart3,
   Settings,
   User,
   Bell,
   ChevronRight,
+  LogOut,
   type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui-app/PageHeader";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { signOut } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/more")({
   head: () => ({
     meta: [
       { title: "More — Inventory Pulse" },
-      { name: "description", content: "Shopping, analytics, settings and your profile." },
+      { name: "description", content: "Analytics, notifications, settings and your profile." },
     ],
   }),
   component: MorePage,
 });
 
-const items: Array<{ to: string; label: string; description: string; icon: LucideIcon }> = [
-  { to: "/more", label: "Shopping list", description: "Auto-generated and manual items", icon: ShoppingCart },
+const items: Array<{ to: "/analytics" | "/notifications" | "/settings" | "/profile"; label: string; description: string; icon: LucideIcon }> = [
   { to: "/analytics", label: "Analytics", description: "Waste, savings, and trends", icon: BarChart3 },
   { to: "/notifications", label: "Notifications", description: "Manage alerts", icon: Bell },
-  { to: "/more", label: "Settings", description: "Preferences and modes", icon: Settings },
-  { to: "/more", label: "Profile", description: "Your account", icon: User },
+  { to: "/settings", label: "Settings", description: "Preferences and data", icon: Settings },
+  { to: "/profile", label: "Profile", description: "Your account", icon: User },
 ];
 
 function MorePage() {
@@ -54,6 +55,9 @@ function MorePage() {
           );
         })}
       </Card>
+      <Button variant="outline" className="w-full" onClick={() => signOut()}>
+        <LogOut className="h-4 w-4" /> Sign out
+      </Button>
     </div>
   );
 }
