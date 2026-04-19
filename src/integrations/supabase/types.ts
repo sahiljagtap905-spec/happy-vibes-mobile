@@ -14,16 +14,268 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      inventory_items: {
+        Row: {
+          added_at: string
+          category: string
+          created_at: string
+          expires_at: string
+          id: string
+          image_url: string | null
+          location: string
+          name: string
+          notes: string | null
+          quantity: number
+          unit: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          category: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          image_url?: string | null
+          location?: string
+          name: string
+          notes?: string | null
+          quantity?: number
+          unit?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          category?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          image_url?: string | null
+          location?: string
+          name?: string
+          notes?: string | null
+          quantity?: number
+          unit?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          expiry_alerts: boolean
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          recipe_alerts: boolean
+          restock_alerts: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expiry_alerts?: boolean
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          recipe_alerts?: boolean
+          restock_alerts?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expiry_alerts?: boolean
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          recipe_alerts?: boolean
+          restock_alerts?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          read: boolean
+          related_item_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          related_item_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          related_item_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_related_item_id_fkey"
+            columns: ["related_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          business_mode_default: boolean
+          created_at: string
+          dietary_preferences: string[]
+          display_name: string | null
+          household_size: number
+          id: string
+          kitchen_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          business_mode_default?: boolean
+          created_at?: string
+          dietary_preferences?: string[]
+          display_name?: string | null
+          household_size?: number
+          id: string
+          kitchen_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          business_mode_default?: boolean
+          created_at?: string
+          dietary_preferences?: string[]
+          display_name?: string | null
+          household_size?: number
+          id?: string
+          kitchen_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      recipes: {
+        Row: {
+          created_at: string
+          description: string
+          difficulty: string
+          id: string
+          image_emoji: string | null
+          ingredients: Json
+          servings: number
+          steps: Json
+          tags: string[]
+          time_minutes: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          difficulty?: string
+          id: string
+          image_emoji?: string | null
+          ingredients?: Json
+          servings?: number
+          steps?: Json
+          tags?: string[]
+          time_minutes: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          difficulty?: string
+          id?: string
+          image_emoji?: string | null
+          ingredients?: Json
+          servings?: number
+          steps?: Json
+          tags?: string[]
+          time_minutes?: number
+          title?: string
+        }
+        Relationships: []
+      }
+      saved_recipes: {
+        Row: {
+          recipe_id: string
+          saved_at: string
+          user_id: string
+        }
+        Insert: {
+          recipe_id: string
+          saved_at?: string
+          user_id: string
+        }
+        Update: {
+          recipe_id?: string
+          saved_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_recipes_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +402,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
