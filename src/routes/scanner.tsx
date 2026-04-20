@@ -38,27 +38,43 @@ function ScannerPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const stopFnRef = useRef<(() => void) | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult>({});
   const [manualName, setManualName] = useState("");
 
   const stopCamera = useCallback(() => {
+    // Stop ZXing decoding loop
     try {
       stopFnRef.current?.();
     } catch {
       /* noop */
     }
     stopFnRef.current = null;
-    const stream = videoRef.current?.srcObject as MediaStream | null;
-    stream?.getTracks().forEach((t) => t.stop());
-    if (videoRef.current) videoRef.current.srcObject = null;
+
+    // Stop all tracks on the stream we created
+    try {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    } catch {
+      /* noop */
+    }
+    streamRef.current = null;
+
+    // Also stop any tracks bound to the video element (belt & suspenders)
+    const videoStream = videoRef.current?.srcObject as MediaStream | null;
+    videoStream?.getTracks().forEach((t) => t.stop());
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
   }, []);
 
   const lookupBarcode = useCallback(async (barcode: string) => {
     setStatus("lookup");
     try {
-      const { data, error } = await supabase.functions.invoke("lookup-product", { body: { barcode } });
+      const { data, error } = await supabase.functions.invoke("lookup-product", {
+        body: { barcode },
+      });
       if (error) throw new Error(error.message);
       if (data?.found && data.product) {
         setResult((r) => ({
@@ -73,7 +89,9 @@ function ScannerPage() {
       }
     } catch (e) {
       console.error("OFF lookup failed", e);
-      toast("Lookup failed", { description: e instanceof Error ? e.message : "Try again" });
+      toast("Lookup failed", {
+        description: e instanceof Error ? e.message : "Try again",
+      });
     } finally {
       setStatus("result");
     }
@@ -84,41 +102,119 @@ function ScannerPage() {
     setStatus("starting");
     setResult({});
     setManualName("");
+
     try {
+      // STEP A: Check camera API support
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Camera API not supported in this browser");
+      }
+
+      // STEP B: Manually request rear camera stream first
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+      streamRef.current = stream;
+
+      // STEP C: Attach stream to video element
+      if (!videoRef.current) {
+        // If video element isn't mounted yet, clean up and bail
+        stream.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        throw new Error("Video element not ready");
+      }
+
+      videoRef.current.srcObject = stream;
+
+      // STEP D: Force playback (iOS / autoplay policies)
+      try {
+        await videoRef.current.play();
+      } catch (playErr) {
+        console.warn("Initial play blocked, will retry on metadata:", playErr);
+      }
+
+      // STEP E: Grab deviceId from the active track so ZXing reuses the SAME camera
+      const videoTrack = stream.getVideoTracks()[0];
+      const deviceId = videoTrack?.getSettings().deviceId;
+
+      // STEP F: Let ZXing decode frames from the same video element / device
       readerRef.current = new BrowserMultiFormatReader();
       const controls = await readerRef.current.decodeFromVideoDevice(
-        undefined,
-        videoRef.current!,
+        deviceId ?? undefined,
+        videoRef.current,
         (res: Result | undefined, err) => {
           if (res) {
             const code = res.getText();
             setResult((r) => ({ ...r, barcode: code }));
-            controls.stop();
+            // Stop decoding loop, but keep video alive briefly
+            try {
+              controls.stop();
+            } catch {
+              /* noop */
+            }
             stopFnRef.current = null;
             void lookupBarcode(code);
           }
-          if (err && err.name !== "NotFoundException") {
-            // keep scanning
+          // Ignore NotFoundException — it just means "no barcode this frame"
+          if (err && err.name && err.name !== "NotFoundException") {
+            // keep scanning; optionally log
+            // console.debug("decode err:", err.name);
           }
         },
       );
-      stopFnRef.current = () => controls.stop();
+
+      stopFnRef.current = () => {
+        try {
+          controls.stop();
+        } catch {
+          /* noop */
+        }
+      };
       setStatus("scanning");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Camera unavailable";
+      console.error("Camera start failed:", e);
+      // Make sure we don't leak a stream
+      try {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+      } catch {
+        /* noop */
+      }
+      streamRef.current = null;
+
+      const err = e as Error & { name?: string };
+      const msg =
+        err.name === "NotAllowedError"
+          ? "Camera permission denied. Please allow camera access in your browser settings."
+          : err.name === "NotFoundError"
+            ? "No camera found on this device."
+            : err.name === "NotReadableError"
+              ? "Camera is in use by another app. Close other apps and try again."
+              : err.name === "OverconstrainedError"
+                ? "No camera matches the requested settings."
+                : err.message || "Camera unavailable";
       setError(msg);
       setStatus("error");
     }
   }, [lookupBarcode]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => stopCamera();
   }, [stopCamera]);
 
   const captureForOCR = useCallback(async () => {
     if (!videoRef.current) return;
-    setStatus("ocr");
     const video = videoRef.current;
+    if (!video.videoWidth || !video.videoHeight) {
+      toast("Video not ready", { description: "Wait a moment and try again." });
+      return;
+    }
+
+    setStatus("ocr");
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -128,6 +224,7 @@ function ScannerPage() {
       return;
     }
     ctx.drawImage(video, 0, 0);
+
     try {
       const { data } = await Tesseract.recognize(canvas, "eng");
       const expiry = extractExpiryDate(data.text);
@@ -151,7 +248,12 @@ function ScannerPage() {
     stopCamera();
     navigate({
       to: "/inventory",
-      search: { q: manualName || result.barcode || "", freshness: "all", category: "all", sort: "expiry" },
+      search: {
+        q: manualName || result.barcode || "",
+        freshness: "all",
+        category: "all",
+        sort: "expiry",
+      },
     });
   };
 
@@ -177,14 +279,25 @@ function ScannerPage() {
         </Card>
       )}
 
-      {(status === "starting" || status === "scanning" || status === "ocr" || status === "lookup") && (
+      {(status === "starting" ||
+        status === "scanning" ||
+        status === "ocr" ||
+        status === "lookup") && (
         <Card className="overflow-hidden p-0">
           <div className="relative aspect-[3/4] bg-black">
             <video
               ref={videoRef}
               className="absolute inset-0 h-full w-full object-cover"
+              autoPlay
               playsInline
               muted
+              onLoadedMetadata={(e) => {
+                const video = e.currentTarget;
+                video.play().catch((err) => {
+                  console.error("Video play failed:", err);
+                  setError("Could not start video playback. Tap 'Start camera' again.");
+                });
+              }}
             />
             <ScannerOverlay status={status} />
             <button
@@ -202,11 +315,7 @@ function ScannerPage() {
               {status === "ocr" && "Reading text…"}
               {status === "lookup" && "Looking up product…"}
             </p>
-            <Button
-              variant="secondary"
-              onClick={captureForOCR}
-              disabled={status !== "scanning"}
-            >
+            <Button variant="secondary" onClick={captureForOCR} disabled={status !== "scanning"}>
               <Type className="h-4 w-4" />
               Capture expiry text (OCR)
             </Button>
@@ -218,24 +327,30 @@ function ScannerPage() {
         <Card className="space-y-4 p-5">
           <div>
             <h2 className="text-base font-semibold text-foreground">Scan result</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Review and add to your inventory.
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Review and add to your inventory.</p>
           </div>
 
           <div className="grid gap-3">
             {result.productName && (
               <div className="flex items-start gap-3 rounded-lg border border-fresh/30 bg-fresh/5 p-3">
                 {result.productImage ? (
-                  <img src={result.productImage} alt={result.productName} className="h-14 w-14 rounded-md object-cover" />
+                  <img
+                    src={result.productImage}
+                    alt={result.productName}
+                    className="h-14 w-14 rounded-md object-cover"
+                  />
                 ) : (
-                  <div className="flex h-14 w-14 items-center justify-center rounded-md bg-muted text-2xl">📦</div>
+                  <div className="flex h-14 w-14 items-center justify-center rounded-md bg-muted text-2xl">
+                    📦
+                  </div>
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-fresh">
                     <Sparkles className="h-3 w-3" /> Found via Open Food Facts
                   </p>
-                  <p className="truncate text-sm font-semibold text-foreground">{result.productName}</p>
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {result.productName}
+                  </p>
                   {result.productCategory && (
                     <p className="text-xs text-muted-foreground">{result.productCategory}</p>
                   )}
