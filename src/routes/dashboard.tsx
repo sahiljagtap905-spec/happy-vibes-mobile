@@ -1,16 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Package, AlertTriangle, PiggyBank, ScanLine, Plus, ChefHat } from "lucide-react";
+import { Package, AlertTriangle, PiggyBank, ScanLine, Plus, ChefHat, Sparkles } from "lucide-react";
 import { FreshnessGauge } from "@/components/ui-app/FreshnessGauge";
 import { StatCard } from "@/components/ui-app/StatCard";
 import { QuickActionButton } from "@/components/ui-app/QuickActionButton";
 import { FreshnessBadge } from "@/components/ui-app/FreshnessBadge";
+import { AISuggestionsPanel } from "@/components/ui-app/AISuggestionsPanel";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useInventory } from "@/hooks/useInventory";
+import { useSuggestRecipes } from "@/hooks/useAISuggestions";
 import { supabase } from "@/integrations/supabase/client";
-import { getFreshnessLevel, getRelativeExpiryText } from "@/lib/inventory-data";
+import { getFreshnessLevel, getRelativeExpiryText, getDaysUntilExpiry } from "@/lib/inventory-data";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
