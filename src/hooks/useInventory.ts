@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { InventoryItem } from "@/lib/inventory-data";
+import { cacheInventory, readCachedInventory } from "@/lib/inventory-cache";
 
 interface DbItem {
   id: string;
@@ -37,12 +38,20 @@ export function useInventory(userId: string | undefined) {
     queryKey: ["inventory", userId],
     enabled: !!userId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("inventory_items")
-        .select("*")
-        .order("expires_at", { ascending: true });
-      if (error) throw error;
-      return (data as DbItem[]).map(toItem);
+      try {
+        const { data, error } = await supabase
+          .from("inventory_items")
+          .select("*")
+          .order("expires_at", { ascending: true });
+        if (error) throw error;
+        const items = (data as DbItem[]).map(toItem);
+        cacheInventory(items);
+        return items;
+      } catch (err) {
+        const cached = await readCachedInventory<InventoryItem>();
+        if (cached) return cached;
+        throw err;
+      }
     },
   });
 
