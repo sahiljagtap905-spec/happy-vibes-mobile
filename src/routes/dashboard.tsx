@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useInventory } from "@/hooks/useInventory";
 import { useSuggestRecipes } from "@/hooks/useAISuggestions";
 import { supabase } from "@/integrations/supabase/client";
-import { getFreshnessLevel, getRelativeExpiryText, getDaysUntilExpiry } from "@/lib/inventory-data";
+import { getFreshnessLevel, getRelativeExpiryText } from "@/lib/inventory-data";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
