@@ -1,14 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Package, AlertTriangle, PiggyBank, ScanLine, Plus, ChefHat } from "lucide-react";
+import { Package, AlertTriangle, PiggyBank, ScanLine, Plus, ChefHat, Sparkles } from "lucide-react";
 import { FreshnessGauge } from "@/components/ui-app/FreshnessGauge";
 import { StatCard } from "@/components/ui-app/StatCard";
 import { QuickActionButton } from "@/components/ui-app/QuickActionButton";
 import { FreshnessBadge } from "@/components/ui-app/FreshnessBadge";
+import { AISuggestionsPanel } from "@/components/ui-app/AISuggestionsPanel";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useInventory } from "@/hooks/useInventory";
+import { useSuggestRecipes } from "@/hooks/useAISuggestions";
 import { supabase } from "@/integrations/supabase/client";
 import { getFreshnessLevel, getRelativeExpiryText } from "@/lib/inventory-data";
 
@@ -33,6 +36,13 @@ function DashboardPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const { data: items = [] } = useInventory(user?.id);
+  const rescue = useSuggestRecipes();
+  const [showRescue, setShowRescue] = useState(false);
+
+  const runRescue = () => {
+    setShowRescue(true);
+    rescue.mutate({ items, mode: "rescue" });
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -93,8 +103,28 @@ function DashboardPage() {
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">Expiring soon</h2>
-          <span className="text-xs font-medium text-muted-foreground">{expiringSoon.length} items</span>
+          <div className="flex items-center gap-2">
+            {expiringSoon.length > 0 && (
+              <Button size="sm" variant="ghost" onClick={runRescue} disabled={rescue.isPending} className="h-7 px-2 text-xs">
+                <Sparkles className="h-3 w-3" /> Rescue ideas
+              </Button>
+            )}
+            <span className="text-xs font-medium text-muted-foreground">{expiringSoon.length} items</span>
+          </div>
         </div>
+
+        {showRescue && (
+          <div className="mb-3">
+            <AISuggestionsPanel
+              recipes={rescue.data ?? []}
+              isLoading={rescue.isPending}
+              error={rescue.error ? (rescue.error as Error).message : null}
+              onRetry={runRescue}
+              onDismiss={() => setShowRescue(false)}
+              title="Use these before they expire"
+            />
+          </div>
+        )}
         {expiringSoon.length === 0 ? (
           <Card className="p-6 text-center text-sm text-muted-foreground">
             Nothing expiring soon. Add items from the Inventory tab or Settings → Load sample data.

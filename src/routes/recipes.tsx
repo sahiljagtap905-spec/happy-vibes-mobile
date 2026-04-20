@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { Clock, Users, Sparkles, Zap, Search, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
@@ -8,7 +9,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { AISuggestionsPanel } from "@/components/ui-app/AISuggestionsPanel";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useInventory } from "@/hooks/useInventory";
+import { useSuggestRecipes } from "@/hooks/useAISuggestions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -43,6 +48,19 @@ export const Route = createFileRoute("/recipes")({
 function RecipesPage() {
   const { q, tag, business } = Route.useSearch();
   const navigate = useNavigate({ from: "/recipes" });
+  const { user } = useAuth();
+  const { data: items = [] } = useInventory(user?.id);
+  const suggest = useSuggestRecipes();
+  const [showAI, setShowAI] = useState(false);
+
+  const runSuggest = () => {
+    if (items.length === 0) {
+      toast("Add inventory first", { description: "We need ingredients to suggest recipes." });
+      return;
+    }
+    setShowAI(true);
+    suggest.mutate({ items, mode: "general", businessMode: business });
+  };
 
   const { data: recipes = [], isLoading } = useQuery({
     queryKey: ["recipes"],
@@ -71,20 +89,23 @@ function RecipesPage() {
         title="Recipes"
         description="Cook smart with what's in your kitchen"
         action={
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              toast("AI suggestions coming soon", {
-                description: "We'll generate recipes from your inventory in Phase 7.",
-              })
-            }
-          >
+          <Button size="sm" variant="outline" onClick={runSuggest} disabled={suggest.isPending}>
             <Sparkles className="h-4 w-4" />
             AI suggest
           </Button>
         }
       />
+
+      {showAI && (
+        <AISuggestionsPanel
+          recipes={suggest.data ?? []}
+          isLoading={suggest.isPending}
+          error={suggest.error ? (suggest.error as Error).message : null}
+          onRetry={runSuggest}
+          onDismiss={() => setShowAI(false)}
+          title="Recipes from your kitchen"
+        />
+      )}
 
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

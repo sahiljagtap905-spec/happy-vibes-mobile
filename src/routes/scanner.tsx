@@ -2,13 +2,15 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import type { Result } from "@zxing/library";
-import { ScanLine, Camera, X, Loader2, RefreshCw, Type } from "lucide-react";
+import { ScanLine, Camera, X, Loader2, RefreshCw, Type, Sparkles } from "lucide-react";
 import Tesseract from "tesseract.js";
 import { PageHeader } from "@/components/ui-app/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/scanner")({
   head: () => ({
@@ -20,12 +22,15 @@ export const Route = createFileRoute("/scanner")({
   component: ScannerPage,
 });
 
-type Status = "idle" | "starting" | "scanning" | "ocr" | "result" | "error";
+type Status = "idle" | "starting" | "scanning" | "ocr" | "lookup" | "result" | "error";
 
 interface ScanResult {
   barcode?: string;
   expiry?: string;
   raw?: string;
+  productName?: string;
+  productCategory?: string;
+  productImage?: string;
 }
 
 function ScannerPage() {
@@ -50,10 +55,35 @@ function ScannerPage() {
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
+  const lookupBarcode = useCallback(async (barcode: string) => {
+    setStatus("lookup");
+    try {
+      const { data, error } = await supabase.functions.invoke("lookup-product", { body: { barcode } });
+      if (error) throw new Error(error.message);
+      if (data?.found && data.product) {
+        setResult((r) => ({
+          ...r,
+          productName: data.product.name ?? undefined,
+          productCategory: data.product.category ?? undefined,
+          productImage: data.product.imageUrl ?? undefined,
+        }));
+        if (data.product.name) setManualName(data.product.name);
+      } else {
+        toast("Product not found", { description: "Enter the name manually below." });
+      }
+    } catch (e) {
+      console.error("OFF lookup failed", e);
+      toast("Lookup failed", { description: e instanceof Error ? e.message : "Try again" });
+    } finally {
+      setStatus("result");
+    }
+  }, []);
+
   const startScanning = useCallback(async () => {
     setError(null);
     setStatus("starting");
     setResult({});
+    setManualName("");
     try {
       readerRef.current = new BrowserMultiFormatReader();
       const controls = await readerRef.current.decodeFromVideoDevice(
@@ -61,12 +91,12 @@ function ScannerPage() {
         videoRef.current!,
         (res: Result | undefined, err) => {
           if (res) {
-            setResult((r) => ({ ...r, barcode: res.getText() }));
-            setStatus("result");
+            const code = res.getText();
+            setResult((r) => ({ ...r, barcode: code }));
             controls.stop();
             stopFnRef.current = null;
+            void lookupBarcode(code);
           }
-          // ignore NotFound errors during continuous scanning
           if (err && err.name !== "NotFoundException") {
             // keep scanning
           }
@@ -79,7 +109,7 @@ function ScannerPage() {
       setError(msg);
       setStatus("error");
     }
-  }, []);
+  }, [lookupBarcode]);
 
   useEffect(() => {
     return () => stopCamera();
@@ -147,7 +177,7 @@ function ScannerPage() {
         </Card>
       )}
 
-      {(status === "starting" || status === "scanning" || status === "ocr") && (
+      {(status === "starting" || status === "scanning" || status === "ocr" || status === "lookup") && (
         <Card className="overflow-hidden p-0">
           <div className="relative aspect-[3/4] bg-black">
             <video
@@ -170,6 +200,7 @@ function ScannerPage() {
               {status === "scanning" && "Searching for a barcode…"}
               {status === "starting" && "Starting camera…"}
               {status === "ocr" && "Reading text…"}
+              {status === "lookup" && "Looking up product…"}
             </p>
             <Button
               variant="secondary"
@@ -193,6 +224,24 @@ function ScannerPage() {
           </div>
 
           <div className="grid gap-3">
+            {result.productName && (
+              <div className="flex items-start gap-3 rounded-lg border border-fresh/30 bg-fresh/5 p-3">
+                {result.productImage ? (
+                  <img src={result.productImage} alt={result.productName} className="h-14 w-14 rounded-md object-cover" />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-md bg-muted text-2xl">📦</div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-fresh">
+                    <Sparkles className="h-3 w-3" /> Found via Open Food Facts
+                  </p>
+                  <p className="truncate text-sm font-semibold text-foreground">{result.productName}</p>
+                  {result.productCategory && (
+                    <p className="text-xs text-muted-foreground">{result.productCategory}</p>
+                  )}
+                </div>
+              </div>
+            )}
             <div>
               <Label className="text-xs text-muted-foreground">Barcode</Label>
               <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-sm">
@@ -255,7 +304,7 @@ function ScannerOverlay({ status }: { status: Status }) {
         {status === "scanning" && (
           <span className="absolute left-2 right-2 top-1/2 h-0.5 -translate-y-1/2 animate-pulse bg-primary" />
         )}
-        {status === "ocr" && (
+        {(status === "ocr" || status === "lookup") && (
           <span className="absolute inset-0 flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </span>
