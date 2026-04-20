@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { AppShell } from "@/components/layout/AppShell";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { registerServiceWorker } from "@/lib/registerSW";
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -60,6 +61,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/icon-192.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -104,6 +107,8 @@ function AppContent() {
 
   const isPublic = PUBLIC_ROUTES.some((p) => pathname === p || pathname.startsWith(p + "/"));
   const isBare = pathname === "/welcome" || pathname === "/auth" || pathname === "/reset-password";
+
+  useEffect(() => { registerServiceWorker(); }, []);
 
   useEffect(() => {
     if (loading) return;

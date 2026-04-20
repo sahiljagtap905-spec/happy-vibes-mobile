@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, AlertTriangle, ShoppingBag, ChefHat, CheckCheck } from "lucide-react";
+import { Bell, AlertTriangle, ShoppingBag, ChefHat, CheckCheck, BellRing, Download } from "lucide-react";
 import { PageHeader } from "@/components/ui-app/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({ meta: [{ title: "Notifications — Inventory Pulse" }] }),
@@ -74,6 +76,9 @@ function NotificationsPage() {
     if (error) toast.error(error.message);
   };
 
+  const push = usePushNotifications();
+  const install = useInstallPrompt();
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -83,6 +88,40 @@ function NotificationsPage() {
           <Button size="sm" variant="ghost" onClick={markAll}><CheckCheck className="h-4 w-4" />Mark all read</Button>
         ) : undefined}
       />
+
+      {(install.canInstall || push.supported) && (
+        <Card className="space-y-3 p-4">
+          {install.canInstall && (
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <Download className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground">Install Inventory Pulse</p>
+                <p className="text-xs text-muted-foreground">Get a faster, app-like experience.</p>
+              </div>
+              <Button size="sm" onClick={install.promptInstall}>Install</Button>
+            </div>
+          )}
+          {push.supported && (
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <BellRing className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground">Push notifications</p>
+                <p className="text-xs text-muted-foreground">
+                  {push.subscribed ? "Enabled on this device" : "Get expiry alerts even when the app is closed"}
+                </p>
+              </div>
+              <Button size="sm" variant={push.subscribed ? "outline" : "default"} disabled={push.busy}
+                onClick={() => (push.subscribed ? push.unsubscribe() : push.subscribe())}>
+                {push.subscribed ? "Disable" : "Enable"}
+              </Button>
+            </div>
+          )}
+        </Card>
+      )}
 
       {alerts.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">No notifications yet.</Card>
