@@ -21,6 +21,8 @@ export const CATEGORIES: Category[] = [
 
 export type Location = "Fridge" | "Pantry" | "Freezer";
 
+export const LOCATIONS: Location[] = ["Fridge", "Pantry", "Freezer"];
+
 export type FreshnessLevel = "fresh" | "warning" | "urgent" | "expired";
 
 export interface InventoryItem {
@@ -33,12 +35,19 @@ export interface InventoryItem {
   addedAt: string; // ISO
   imageUrl?: string;
   location: Location;
+  barcode?: string;
+  notes?: string;
 }
+
+export type NewInventoryItem = Omit<InventoryItem, "id" | "addedAt"> & {
+  addedAt?: string;
+};
 
 const DAY_MS = 1000 * 60 * 60 * 24;
 
 export function getDaysUntilExpiry(expiresAt: string, now: Date = new Date()): number {
   const expiry = new Date(expiresAt);
+  if (Number.isNaN(expiry.getTime())) return 0;
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const end = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate()).getTime();
   return Math.round((end - start) / DAY_MS);
@@ -88,6 +97,19 @@ export const MOCK_INVENTORY: InventoryItem[] = [
 
 export type FreshnessFilter = "all" | FreshnessLevel;
 export type SortKey = "expiry" | "name" | "recent";
+export type CategoryFilter = "all" | Category;
+
+export function isCategory(value: string): value is Category {
+  return (CATEGORIES as string[]).includes(value);
+}
+
+export function isFreshnessFilter(value: string): value is FreshnessFilter {
+  return value === "all" || value === "fresh" || value === "warning" || value === "urgent" || value === "expired";
+}
+
+export function isSortKey(value: string): value is SortKey {
+  return value === "expiry" || value === "name" || value === "recent";
+}
 
 export function filterItems(
   items: InventoryItem[],
@@ -95,7 +117,11 @@ export function filterItems(
 ): InventoryItem[] {
   const q = opts.q.trim().toLowerCase();
   return items.filter((item) => {
-    if (q && !item.name.toLowerCase().includes(q)) return false;
+    if (q) {
+      const inName = item.name.toLowerCase().includes(q);
+      const inBarcode = item.barcode?.toLowerCase().includes(q) ?? false;
+      if (!inName && !inBarcode) return false;
+    }
     if (opts.category !== "all" && item.category !== opts.category) return false;
     if (opts.freshness !== "all" && getFreshnessLevel(item.expiresAt) !== opts.freshness) return false;
     return true;
