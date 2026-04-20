@@ -55,10 +55,35 @@ function ScannerPage() {
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
+  const lookupBarcode = useCallback(async (barcode: string) => {
+    setStatus("lookup");
+    try {
+      const { data, error } = await supabase.functions.invoke("lookup-product", { body: { barcode } });
+      if (error) throw new Error(error.message);
+      if (data?.found && data.product) {
+        setResult((r) => ({
+          ...r,
+          productName: data.product.name ?? undefined,
+          productCategory: data.product.category ?? undefined,
+          productImage: data.product.imageUrl ?? undefined,
+        }));
+        if (data.product.name) setManualName(data.product.name);
+      } else {
+        toast("Product not found", { description: "Enter the name manually below." });
+      }
+    } catch (e) {
+      console.error("OFF lookup failed", e);
+      toast("Lookup failed", { description: e instanceof Error ? e.message : "Try again" });
+    } finally {
+      setStatus("result");
+    }
+  }, []);
+
   const startScanning = useCallback(async () => {
     setError(null);
     setStatus("starting");
     setResult({});
+    setManualName("");
     try {
       readerRef.current = new BrowserMultiFormatReader();
       const controls = await readerRef.current.decodeFromVideoDevice(
@@ -66,12 +91,12 @@ function ScannerPage() {
         videoRef.current!,
         (res: Result | undefined, err) => {
           if (res) {
-            setResult((r) => ({ ...r, barcode: res.getText() }));
-            setStatus("result");
+            const code = res.getText();
+            setResult((r) => ({ ...r, barcode: code }));
             controls.stop();
             stopFnRef.current = null;
+            void lookupBarcode(code);
           }
-          // ignore NotFound errors during continuous scanning
           if (err && err.name !== "NotFoundException") {
             // keep scanning
           }
@@ -84,7 +109,7 @@ function ScannerPage() {
       setError(msg);
       setStatus("error");
     }
-  }, []);
+  }, [lookupBarcode]);
 
   useEffect(() => {
     return () => stopCamera();
