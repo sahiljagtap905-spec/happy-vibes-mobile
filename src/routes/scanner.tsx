@@ -177,7 +177,7 @@ function ScannerPage() {
         </Card>
       )}
 
-      {(status === "starting" || status === "scanning" || status === "ocr") && (
+      {(status === "starting" || status === "scanning" || status === "ocr" || status === "lookup") && (
         <Card className="overflow-hidden p-0">
           <div className="relative aspect-[3/4] bg-black">
             <video
@@ -200,6 +200,7 @@ function ScannerPage() {
               {status === "scanning" && "Searching for a barcode…"}
               {status === "starting" && "Starting camera…"}
               {status === "ocr" && "Reading text…"}
+              {status === "lookup" && "Looking up product…"}
             </p>
             <Button
               variant="secondary"
