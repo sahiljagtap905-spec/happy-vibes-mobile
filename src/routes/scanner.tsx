@@ -2,13 +2,15 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import type { Result } from "@zxing/library";
-import { ScanLine, Camera, X, Loader2, RefreshCw, Type } from "lucide-react";
+import { ScanLine, Camera, X, Loader2, RefreshCw, Type, Sparkles } from "lucide-react";
 import Tesseract from "tesseract.js";
 import { PageHeader } from "@/components/ui-app/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/scanner")({
   head: () => ({
@@ -20,12 +22,15 @@ export const Route = createFileRoute("/scanner")({
   component: ScannerPage,
 });
 
-type Status = "idle" | "starting" | "scanning" | "ocr" | "result" | "error";
+type Status = "idle" | "starting" | "scanning" | "ocr" | "lookup" | "result" | "error";
 
 interface ScanResult {
   barcode?: string;
   expiry?: string;
   raw?: string;
+  productName?: string;
+  productCategory?: string;
+  productImage?: string;
 }
 
 function ScannerPage() {
