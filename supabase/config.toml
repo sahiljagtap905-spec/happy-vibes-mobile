@@ -5,3 +5,9 @@ verify_jwt = true
 
 [functions.lookup-product]
 verify_jwt = true
+
+[functions.push-subscribe]
+verify_jwt = true
+
+[functions.check-expiring]
+verify_jwt = false
