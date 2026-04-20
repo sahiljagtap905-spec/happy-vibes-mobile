@@ -224,6 +224,24 @@ function ScannerPage() {
           </div>
 
           <div className="grid gap-3">
+            {result.productName && (
+              <div className="flex items-start gap-3 rounded-lg border border-fresh/30 bg-fresh/5 p-3">
+                {result.productImage ? (
+                  <img src={result.productImage} alt={result.productName} className="h-14 w-14 rounded-md object-cover" />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-md bg-muted text-2xl">📦</div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-fresh">
+                    <Sparkles className="h-3 w-3" /> Found via Open Food Facts
+                  </p>
+                  <p className="truncate text-sm font-semibold text-foreground">{result.productName}</p>
+                  {result.productCategory && (
+                    <p className="text-xs text-muted-foreground">{result.productCategory}</p>
+                  )}
+                </div>
+              </div>
+            )}
             <div>
               <Label className="text-xs text-muted-foreground">Barcode</Label>
               <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-sm">
