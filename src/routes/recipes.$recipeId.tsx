@@ -42,7 +42,7 @@ function RecipeDetail() {
       const { data, error } = await supabase.from("recipes").select("*").eq("id", recipeId).maybeSingle();
       if (error) throw error;
       if (!data) throw notFound();
-      return data as RecipeFull;
+      return data as unknown as RecipeFull;
     },
   });
 

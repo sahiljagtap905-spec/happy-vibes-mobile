@@ -70,7 +70,7 @@ function NotificationsPage() {
   const updatePref = async (key: keyof typeof prefs, value: boolean) => {
     if (!user) return;
     setPrefs((p) => ({ ...p, [key]: value }));
-    const { error } = await supabase.from("notification_preferences").update({ [key]: value }).eq("user_id", user.id);
+    const { error } = await supabase.from("notification_preferences").update({ [key]: value } as Record<string, boolean>).eq("user_id", user.id);
     if (error) toast.error(error.message);
   };
 
