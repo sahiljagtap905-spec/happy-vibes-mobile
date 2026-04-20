@@ -36,6 +36,13 @@ function DashboardPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const { data: items = [] } = useInventory(user?.id);
+  const rescue = useSuggestRecipes();
+  const [showRescue, setShowRescue] = useState(false);
+
+  const runRescue = () => {
+    setShowRescue(true);
+    rescue.mutate({ items, mode: "rescue" });
+  };
 
   useEffect(() => {
     if (!user) return;
