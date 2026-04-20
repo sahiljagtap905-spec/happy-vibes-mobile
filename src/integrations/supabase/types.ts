@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      expiry_alert_log: {
+        Row: {
+          bucket: string
+          item_id: string
+          notified_at: string
+          user_id: string
+        }
+        Insert: {
+          bucket: string
+          item_id: string
+          notified_at?: string
+          user_id: string
+        }
+        Update: {
+          bucket?: string
+          item_id?: string
+          notified_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       inventory_items: {
         Row: {
           added_at: string
@@ -169,6 +190,39 @@ export type Database = {
           id?: string
           kitchen_name?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_used_at: string
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_used_at?: string
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_used_at?: string
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
         }
         Relationships: []
       }
