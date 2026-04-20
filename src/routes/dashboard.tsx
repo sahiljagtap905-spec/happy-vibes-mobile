@@ -103,8 +103,28 @@ function DashboardPage() {
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">Expiring soon</h2>
-          <span className="text-xs font-medium text-muted-foreground">{expiringSoon.length} items</span>
+          <div className="flex items-center gap-2">
+            {expiringSoon.length > 0 && (
+              <Button size="sm" variant="ghost" onClick={runRescue} disabled={rescue.isPending} className="h-7 px-2 text-xs">
+                <Sparkles className="h-3 w-3" /> Rescue ideas
+              </Button>
+            )}
+            <span className="text-xs font-medium text-muted-foreground">{expiringSoon.length} items</span>
+          </div>
         </div>
+
+        {showRescue && (
+          <div className="mb-3">
+            <AISuggestionsPanel
+              recipes={rescue.data ?? []}
+              isLoading={rescue.isPending}
+              error={rescue.error ? (rescue.error as Error).message : null}
+              onRetry={runRescue}
+              onDismiss={() => setShowRescue(false)}
+              title="Use these before they expire"
+            />
+          </div>
+        )}
         {expiringSoon.length === 0 ? (
           <Card className="p-6 text-center text-sm text-muted-foreground">
             Nothing expiring soon. Add items from the Inventory tab or Settings → Load sample data.
