@@ -1,1 +1,7 @@
 project_id = "onrkmmgkcnmghfmdfjye"
+
+[functions.suggest-recipes]
+verify_jwt = true
+
+[functions.lookup-product]
+verify_jwt = true
