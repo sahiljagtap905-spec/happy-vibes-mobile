@@ -304,7 +304,7 @@ function ScannerOverlay({ status }: { status: Status }) {
         {status === "scanning" && (
           <span className="absolute left-2 right-2 top-1/2 h-0.5 -translate-y-1/2 animate-pulse bg-primary" />
         )}
-        {status === "ocr" && (
+        {(status === "ocr" || status === "lookup") && (
           <span className="absolute inset-0 flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </span>
