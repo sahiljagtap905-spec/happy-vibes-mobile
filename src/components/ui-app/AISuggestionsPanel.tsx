@@ -10,6 +10,7 @@ interface Props {
   error: string | null;
   onRetry: () => void;
   onDismiss: () => void;
+  onRecipeClick?: (recipe: AISuggestedRecipe) => void;
   title?: string;
   emptyHint?: string;
 }
@@ -20,6 +21,7 @@ export function AISuggestionsPanel({
   error,
   onRetry,
   onDismiss,
+  onRecipeClick,
   title = "AI suggestions",
   emptyHint,
 }: Props) {
@@ -62,25 +64,33 @@ export function AISuggestionsPanel({
       {!isLoading && recipes.length > 0 && (
         <ul className="space-y-2">
           {recipes.map((r, i) => (
-            <li key={i} className="flex gap-3 rounded-lg border border-border bg-card p-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-muted text-2xl">
-                {r.emoji || "🍽️"}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-semibold text-foreground">{r.title}</p>
-                  <Badge variant="secondary" className="shrink-0 text-[10px]">{r.difficulty}</Badge>
+            <li key={i}>
+              <button
+                type="button"
+                onClick={() => onRecipeClick?.(r)}
+                className="flex w-full cursor-pointer gap-3 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-primary/50 hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary"
+                aria-label={`View recipe: ${r.title}`}
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-muted text-2xl">
+                  {r.emoji || "🍽️"}
                 </div>
-                <p className="line-clamp-2 text-xs text-muted-foreground">{r.description}</p>
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px]">
-                  <span className="inline-flex items-center gap-1 text-muted-foreground">
-                    <Clock className="h-3 w-3" /> {r.timeMinutes}m
-                  </span>
-                  {r.usesIngredients.slice(0, 4).map((ing) => (
-                    <span key={ing} className="rounded-full bg-fresh/10 px-2 py-0.5 text-fresh">{ing}</span>
-                  ))}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold text-foreground">{r.title}</p>
+                    <Badge variant="secondary" className="shrink-0 text-[10px]">{r.difficulty}</Badge>
+                  </div>
+                  <p className="line-clamp-2 text-xs text-muted-foreground">{r.description}</p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px]">
+                    <span className="inline-flex items-center gap-1 text-muted-foreground">
+                      <Clock className="h-3 w-3" /> {r.timeMinutes}m
+                    </span>
+                    {r.usesIngredients.slice(0, 4).map((ing) => (
+                      <span key={ing} className="rounded-full bg-fresh/10 px-2 py-0.5 text-fresh">{ing}</span>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-[10px] font-medium text-primary">Click to view recipe →</p>
                 </div>
-              </div>
+              </button>
             </li>
           ))}
         </ul>

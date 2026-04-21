@@ -10,6 +10,8 @@ export interface AISuggestedRecipe {
   difficulty: "Easy" | "Medium" | "Hard";
   usesIngredients: string[];
   emoji: string;
+  ingredients: string[];
+  instructions: string[];
 }
 
 interface SuggestArgs {
