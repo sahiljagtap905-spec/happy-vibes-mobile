@@ -37,7 +37,7 @@ const searchSchema = z.object({
   imageUrl: fallback(z.string(), "").default(""),
 });
 
-export const Route = createFileRoute("/inventory/add")({
+export const addItemRouteOptions = {
   validateSearch: zodValidator(searchSchema),
   head: () => ({
     meta: [
@@ -46,7 +46,11 @@ export const Route = createFileRoute("/inventory/add")({
     ],
   }),
   component: AddItemPage,
-});
+} as const;
+
+export const Route = createFileRoute("/inventory/add")(addItemRouteOptions);
+
+export { AddItemPage };
 
 function parseISODate(s: string): Date | undefined {
   if (!s) return undefined;

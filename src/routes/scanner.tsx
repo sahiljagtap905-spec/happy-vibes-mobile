@@ -2,15 +2,21 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import type { Result } from "@zxing/library";
-import { ScanLine, Camera, X, Loader2, RefreshCw, Type, Sparkles } from "lucide-react";
-import Tesseract from "tesseract.js";
+import { ScanLine, Camera, X, Loader2, RefreshCw, Type, Sparkles, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { PageHeader } from "@/components/ui-app/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { useAddItem } from "@/hooks/useInventory";
+import type { Category } from "@/lib/inventory-data";
 
 export const Route = createFileRoute("/scanner")({
   head: () => ({
@@ -22,12 +28,10 @@ export const Route = createFileRoute("/scanner")({
   component: ScannerPage,
 });
 
-type Status = "idle" | "starting" | "scanning" | "ocr" | "lookup" | "result" | "error";
+type Status = "idle" | "starting" | "scanning" | "lookup" | "result" | "error";
 
 interface ScanResult {
   barcode?: string;
-  expiry?: string;
-  raw?: string;
   productName?: string;
   productCategory?: string;
   productImage?: string;
@@ -35,6 +39,8 @@ interface ScanResult {
 
 function ScannerPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const addItem = useAddItem(user?.id);
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const stopFnRef = useRef<(() => void) | null>(null);
@@ -43,6 +49,8 @@ function ScannerPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult>({});
   const [manualName, setManualName] = useState("");
+  const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
+  const [quantity, setQuantity] = useState("1");
 
   const stopCamera = useCallback(() => {
     // Stop ZXing decoding loop
@@ -206,70 +214,69 @@ function ScannerPage() {
     return () => stopCamera();
   }, [stopCamera]);
 
-  const captureForOCR = useCallback(async () => {
-    if (!videoRef.current) return;
-    const video = videoRef.current;
-    if (!video.videoWidth || !video.videoHeight) {
-      toast("Video not ready", { description: "Wait a moment and try again." });
-      return;
-    }
-
-    setStatus("ocr");
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      setStatus("scanning");
-      return;
-    }
-    ctx.drawImage(video, 0, 0);
-
-    try {
-      const { data } = await Tesseract.recognize(canvas, "eng");
-      const expiry = extractExpiryDate(data.text);
-      setResult((r) => ({ ...r, expiry: expiry ?? undefined, raw: data.text }));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "OCR failed");
-    } finally {
-      setStatus("result");
-      stopCamera();
-    }
-  }, [stopCamera]);
-
   const reset = useCallback(() => {
     stopCamera();
     setResult({});
+    setManualName("");
+    setExpiryDate(undefined);
+    setQuantity("1");
     setStatus("idle");
     setError(null);
   }, [stopCamera]);
 
-  const goAdd = () => {
-    stopCamera();
-    const expiryISO = result.expiry ? normalizeExpiryToISO(result.expiry) : "";
-    navigate({
-      to: "/inventory/add",
-      search: {
-        name: manualName || result.productName || "",
-        expiry: expiryISO,
-        barcode: result.barcode || "",
-        category: result.productCategory || "",
-        imageUrl: result.productImage || "",
-      },
-    });
-  };
-
   const goManual = () => {
     stopCamera();
     navigate({
-      to: "/inventory/add",
+      to: "/add-item",
       search: { name: "", expiry: "", barcode: "", category: "", imageUrl: "" },
     });
   };
 
+  const handleAdd = async () => {
+    if (!user) {
+      toast("Sign in required", { description: "Please sign in to add items." });
+      return;
+    }
+    const name = (manualName || result.productName || "").trim();
+    if (!name) {
+      toast("Name required", { description: "Enter a product name." });
+      return;
+    }
+    if (!expiryDate) {
+      toast("Expiry date required", { description: "Pick an expiry date before saving." });
+      return;
+    }
+    const qty = Number(quantity);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      toast("Invalid quantity", { description: "Enter a positive number." });
+      return;
+    }
+
+    try {
+      await addItem.mutateAsync({
+        name,
+        category: (result.productCategory as Category) || "Other",
+        quantity: qty,
+        unit: "pcs",
+        location: "Fridge",
+        expiresAt: expiryDate.toISOString(),
+        imageUrl: result.productImage || undefined,
+      });
+      toast.success("Item added", { description: `${name} is in your inventory.` });
+      navigate({
+        to: "/inventory",
+        search: { q: "", freshness: "all", category: "all", sort: "expiry" },
+      });
+    } catch (e) {
+      toast.error("Could not save", {
+        description: e instanceof Error ? e.message : "Try again.",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Scanner" description="Point your camera at a barcode or expiry date" />
+      <PageHeader title="Scanner" description="Scan a barcode, then enter the expiry date" />
 
       {status === "idle" && (
         <Card className="flex flex-col items-center gap-4 p-8 text-center">
@@ -279,7 +286,7 @@ function ScannerPage() {
           <div>
             <h2 className="text-base font-semibold text-foreground">Ready to scan</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Allow camera access to detect barcodes. Then capture expiry text with OCR.
+              Allow camera access to detect a barcode. You'll enter the expiry date afterwards.
             </p>
           </div>
           <Button onClick={startScanning} className="w-full max-w-xs">
@@ -293,10 +300,7 @@ function ScannerPage() {
         </Card>
       )}
 
-      {(status === "starting" ||
-        status === "scanning" ||
-        status === "ocr" ||
-        status === "lookup") && (
+      {(status === "starting" || status === "scanning" || status === "lookup") && (
         <Card className="overflow-hidden p-0">
           <div className="relative aspect-[3/4] bg-black">
             <video
@@ -326,13 +330,8 @@ function ScannerPage() {
             <p className="text-center text-xs text-muted-foreground">
               {status === "scanning" && "Searching for a barcode…"}
               {status === "starting" && "Starting camera…"}
-              {status === "ocr" && "Reading text…"}
               {status === "lookup" && "Looking up product…"}
             </p>
-            <Button variant="secondary" onClick={captureForOCR} disabled={status !== "scanning"}>
-              <Type className="h-4 w-4" />
-              Capture expiry text (OCR)
-            </Button>
           </div>
         </Card>
       )}
@@ -340,8 +339,10 @@ function ScannerPage() {
       {status === "result" && (
         <Card className="space-y-4 p-5">
           <div>
-            <h2 className="text-base font-semibold text-foreground">Scan result</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Review and add to your inventory.</p>
+            <h2 className="text-base font-semibold text-foreground">Confirm and add</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review the product, set an expiry date, and save it to your inventory.
+            </p>
           </div>
 
           <div className="grid gap-3">
@@ -371,22 +372,18 @@ function ScannerPage() {
                 </div>
               </div>
             )}
+
+            {result.barcode && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Barcode</Label>
+                <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-sm">
+                  {result.barcode}
+                </p>
+              </div>
+            )}
+
             <div>
-              <Label className="text-xs text-muted-foreground">Barcode</Label>
-              <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-sm">
-                {result.barcode ?? "Not detected"}
-              </p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Detected expiry</Label>
-              <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
-                {result.expiry ?? "—"}
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="manual-name" className="text-xs text-muted-foreground">
-                Item name
-              </Label>
+              <Label htmlFor="manual-name">Product name *</Label>
               <Input
                 id="manual-name"
                 value={manualName}
@@ -395,17 +392,71 @@ function ScannerPage() {
                 className="mt-1"
               />
             </div>
+
+            <div>
+              <Label>Expiry date *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "mt-1 w-full justify-start text-left font-normal",
+                      !expiryDate && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {expiryDate ? format(expiryDate, "PPP") : "Pick an expiry date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={expiryDate}
+                    onSelect={setExpiryDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div>
+              <Label htmlFor="scan-qty">Quantity</Label>
+              <Input
+                id="scan-qty"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.1"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className="mt-1"
+              />
+            </div>
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={reset} className="flex-1">
+            <Button variant="outline" onClick={reset} className="flex-1" disabled={addItem.isPending}>
               <RefreshCw className="h-4 w-4" />
               Scan again
             </Button>
-            <Button onClick={goAdd} className="flex-1">
-              Add to inventory
+            <Button onClick={handleAdd} className="flex-1" disabled={addItem.isPending}>
+              {addItem.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Add to inventory"
+              )}
             </Button>
           </div>
+          {!user && (
+            <p className="text-center text-xs text-muted-foreground">
+              Sign in to save items to your inventory.
+            </p>
+          )}
         </Card>
       )}
 
@@ -433,7 +484,7 @@ function ScannerOverlay({ status }: { status: Status }) {
         {status === "scanning" && (
           <span className="absolute left-2 right-2 top-1/2 h-0.5 -translate-y-1/2 animate-pulse bg-primary" />
         )}
-        {(status === "ocr" || status === "lookup") && (
+        {status === "lookup" && (
           <span className="absolute inset-0 flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </span>
@@ -441,90 +492,4 @@ function ScannerOverlay({ status }: { status: Status }) {
       </div>
     </div>
   );
-}
-
-// Tries common date formats and returns the matched raw string.
-function extractExpiryDate(text: string): string | null {
-  const cleaned = text.replace(/\s+/g, " ");
-  const patterns = [
-    /\b(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})\b/, // 2025-05-12
-    /\b(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})\b/, // 12/05/2025 or 12/05/25
-    /\b(\d{1,2}[-/.]\d{4})\b/, // 05/2025 (MM/YYYY)
-    /\b(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})\b/i,
-    /\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})\b/i,
-  ];
-  for (const p of patterns) {
-    const m = cleaned.match(p);
-    if (m) return m[1];
-  }
-  return null;
-}
-
-const MONTHS: Record<string, number> = {
-  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
-};
-
-// Normalize a detected expiry string to ISO (YYYY-MM-DD). Returns "" if invalid.
-export function normalizeExpiryToISO(raw: string): string {
-  if (!raw) return "";
-  const s = raw.trim();
-
-  // ISO YYYY-MM-DD or YYYY/MM/DD
-  let m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
-  if (m) return buildISO(+m[1], +m[2], +m[3]);
-
-  // DD/MM/YYYY (assume non-US)
-  m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
-  if (m) {
-    let y = +m[3];
-    if (y < 100) y += 2000;
-    return buildISO(y, +m[2], +m[1]);
-  }
-
-  // MM/YYYY -> last day of month
-  m = s.match(/^(\d{1,2})[-/.](\d{4})$/);
-  if (m) {
-    const month = +m[1];
-    const year = +m[2];
-    if (month < 1 || month > 12) return "";
-    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-    return buildISO(year, month, lastDay);
-  }
-
-  // 12 May 2025
-  m = s.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{2,4})$/);
-  if (m) {
-    const month = MONTHS[m[2].slice(0, 3).toLowerCase()];
-    if (month === undefined) return "";
-    let y = +m[3];
-    if (y < 100) y += 2000;
-    return buildISO(y, month + 1, +m[1]);
-  }
-
-  // May 2025 -> last day of month
-  m = s.match(/^([A-Za-z]+)\s+(\d{2,4})$/);
-  if (m) {
-    const month = MONTHS[m[1].slice(0, 3).toLowerCase()];
-    if (month === undefined) return "";
-    let y = +m[2];
-    if (y < 100) y += 2000;
-    const lastDay = new Date(Date.UTC(y, month + 1, 0)).getUTCDate();
-    return buildISO(y, month + 1, lastDay);
-  }
-
-  return "";
-}
-
-function buildISO(year: number, month: number, day: number): string {
-  if (month < 1 || month > 12 || day < 1 || day > 31) return "";
-  const d = new Date(Date.UTC(year, month - 1, day));
-  if (
-    d.getUTCFullYear() !== year ||
-    d.getUTCMonth() !== month - 1 ||
-    d.getUTCDate() !== day
-  ) {
-    return "";
-  }
-  return d.toISOString();
 }

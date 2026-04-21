@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
-import { Plus } from "lucide-react";
+import { Plus, ScanLine } from "lucide-react";
 import { PageHeader } from "@/components/ui-app/PageHeader";
 import { Button } from "@/components/ui/button";
 import { InventorySearch } from "@/components/inventory/InventorySearch";
@@ -65,19 +65,30 @@ function InventoryPage() {
         title="Inventory"
         description="All items in your kitchen"
         action={
-          <Button
-            size="sm"
-            className="gap-1"
-            onClick={() =>
-              navigate({
-                to: "/inventory/add",
-                search: { name: "", expiry: "", barcode: "", category: "", imageUrl: "" },
-              })
-            }
-          >
-            <Plus className="h-4 w-4" />
-            Add
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1"
+              onClick={() => navigate({ to: "/scanner" })}
+            >
+              <ScanLine className="h-4 w-4" />
+              Scan
+            </Button>
+            <Button
+              size="sm"
+              className="gap-1"
+              onClick={() =>
+                navigate({
+                  to: "/add-item",
+                  search: { name: "", expiry: "", barcode: "", category: "", imageUrl: "" },
+                })
+              }
+            >
+              <Plus className="h-4 w-4" />
+              Add manually
+            </Button>
+          </div>
         }
       />
 
