@@ -37,7 +37,9 @@ const searchSchema = z.object({
   imageUrl: fallback(z.string(), "").default(""),
 });
 
-export const addItemRouteOptions = {
+export const addItemSearchSchema = searchSchema;
+
+export const Route = createFileRoute("/inventory/add")({
   validateSearch: zodValidator(searchSchema),
   head: () => ({
     meta: [
@@ -46,9 +48,7 @@ export const addItemRouteOptions = {
     ],
   }),
   component: AddItemPage,
-} as const;
-
-export const Route = createFileRoute("/inventory/add")(addItemRouteOptions);
+});
 
 export { AddItemPage };
 
