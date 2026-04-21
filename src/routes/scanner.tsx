@@ -2,15 +2,21 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import type { Result } from "@zxing/library";
-import { ScanLine, Camera, X, Loader2, RefreshCw, Type, Sparkles } from "lucide-react";
-import Tesseract from "tesseract.js";
+import { ScanLine, Camera, X, Loader2, RefreshCw, Type, Sparkles, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { PageHeader } from "@/components/ui-app/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { useAddItem } from "@/hooks/useInventory";
+import type { Category } from "@/lib/inventory-data";
 
 export const Route = createFileRoute("/scanner")({
   head: () => ({
@@ -22,12 +28,10 @@ export const Route = createFileRoute("/scanner")({
   component: ScannerPage,
 });
 
-type Status = "idle" | "starting" | "scanning" | "ocr" | "lookup" | "result" | "error";
+type Status = "idle" | "starting" | "scanning" | "lookup" | "result" | "error";
 
 interface ScanResult {
   barcode?: string;
-  expiry?: string;
-  raw?: string;
   productName?: string;
   productCategory?: string;
   productImage?: string;
@@ -35,6 +39,8 @@ interface ScanResult {
 
 function ScannerPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const addItem = useAddItem(user?.id);
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const stopFnRef = useRef<(() => void) | null>(null);
@@ -43,6 +49,8 @@ function ScannerPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult>({});
   const [manualName, setManualName] = useState("");
+  const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
+  const [quantity, setQuantity] = useState("1");
 
   const stopCamera = useCallback(() => {
     // Stop ZXing decoding loop
