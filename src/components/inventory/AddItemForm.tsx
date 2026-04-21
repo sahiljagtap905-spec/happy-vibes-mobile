@@ -28,11 +28,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAddItem } from "@/hooks/useInventory";
 
 export interface AddItemPrefill {
-  name: string;
-  expiry: string;
-  barcode: string;
-  category: string;
-  imageUrl: string;
+  name?: string;
+  expiry?: string;
+  barcode?: string;
+  category?: string;
+  imageUrl?: string;
 }
 
 function parseISODate(s: string): Date | undefined {
