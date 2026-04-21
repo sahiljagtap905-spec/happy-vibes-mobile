@@ -106,7 +106,7 @@ export function AddItemForm({ prefill }: { prefill: AddItemPrefill }) {
         unit: unit.trim() || "pcs",
         location,
         expiresAt: expiryDate.toISOString(),
-        imageUrl: prefill.imageUrl || undefined,
+        imageUrl: prefillImageUrl || undefined,
       });
       toast.success("Item added", { description: `${name.trim()} is in your inventory.` });
       navigate({
