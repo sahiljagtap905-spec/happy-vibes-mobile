@@ -23,6 +23,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RecipesRecipeIdRouteImport } from './routes/recipes.$recipeId'
+import { Route as InventoryAddRouteImport } from './routes/inventory.add'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -94,13 +95,18 @@ const RecipesRecipeIdRoute = RecipesRecipeIdRouteImport.update({
   path: '/$recipeId',
   getParentRoute: () => RecipesRoute,
 } as any)
+const InventoryAddRoute = InventoryAddRouteImport.update({
+  id: '/add',
+  path: '/add',
+  getParentRoute: () => InventoryRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
-  '/inventory': typeof InventoryRoute
+  '/inventory': typeof InventoryRouteWithChildren
   '/more': typeof MoreRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/scanner': typeof ScannerRoute
   '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
+  '/inventory/add': typeof InventoryAddRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
 export interface FileRoutesByTo {
@@ -116,7 +123,7 @@ export interface FileRoutesByTo {
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
-  '/inventory': typeof InventoryRoute
+  '/inventory': typeof InventoryRouteWithChildren
   '/more': typeof MoreRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/scanner': typeof ScannerRoute
   '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
+  '/inventory/add': typeof InventoryAddRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
 export interface FileRoutesById {
@@ -133,7 +141,7 @@ export interface FileRoutesById {
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
-  '/inventory': typeof InventoryRoute
+  '/inventory': typeof InventoryRouteWithChildren
   '/more': typeof MoreRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/scanner': typeof ScannerRoute
   '/settings': typeof SettingsRoute
   '/welcome': typeof WelcomeRoute
+  '/inventory/add': typeof InventoryAddRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
 export interface FileRouteTypes {
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/scanner'
     | '/settings'
     | '/welcome'
+    | '/inventory/add'
     | '/recipes/$recipeId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/scanner'
     | '/settings'
     | '/welcome'
+    | '/inventory/add'
     | '/recipes/$recipeId'
   id:
     | '__root__'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/scanner'
     | '/settings'
     | '/welcome'
+    | '/inventory/add'
     | '/recipes/$recipeId'
   fileRoutesById: FileRoutesById
 }
@@ -200,7 +212,7 @@ export interface RootRouteChildren {
   AnalyticsRoute: typeof AnalyticsRoute
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
-  InventoryRoute: typeof InventoryRoute
+  InventoryRoute: typeof InventoryRouteWithChildren
   MoreRoute: typeof MoreRoute
   NotificationsRoute: typeof NotificationsRoute
   ProfileRoute: typeof ProfileRoute
@@ -311,8 +323,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RecipesRecipeIdRouteImport
       parentRoute: typeof RecipesRoute
     }
+    '/inventory/add': {
+      id: '/inventory/add'
+      path: '/add'
+      fullPath: '/inventory/add'
+      preLoaderRoute: typeof InventoryAddRouteImport
+      parentRoute: typeof InventoryRoute
+    }
   }
 }
+
+interface InventoryRouteChildren {
+  InventoryAddRoute: typeof InventoryAddRoute
+}
+
+const InventoryRouteChildren: InventoryRouteChildren = {
+  InventoryAddRoute: InventoryAddRoute,
+}
+
+const InventoryRouteWithChildren = InventoryRoute._addFileChildren(
+  InventoryRouteChildren,
+)
 
 interface RecipesRouteChildren {
   RecipesRecipeIdRoute: typeof RecipesRecipeIdRoute
@@ -330,7 +361,7 @@ const rootRouteChildren: RootRouteChildren = {
   AnalyticsRoute: AnalyticsRoute,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
-  InventoryRoute: InventoryRoute,
+  InventoryRoute: InventoryRouteWithChildren,
   MoreRoute: MoreRoute,
   NotificationsRoute: NotificationsRoute,
   ProfileRoute: ProfileRoute,

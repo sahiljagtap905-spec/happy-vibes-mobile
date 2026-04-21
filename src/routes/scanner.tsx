@@ -246,14 +246,24 @@ function ScannerPage() {
 
   const goAdd = () => {
     stopCamera();
+    const expiryISO = result.expiry ? normalizeExpiryToISO(result.expiry) : "";
     navigate({
-      to: "/inventory",
+      to: "/inventory/add",
       search: {
-        q: manualName || result.barcode || "",
-        freshness: "all",
-        category: "all",
-        sort: "expiry",
+        name: manualName || result.productName || "",
+        expiry: expiryISO,
+        barcode: result.barcode || "",
+        category: result.productCategory || "",
+        imageUrl: result.productImage || "",
       },
+    });
+  };
+
+  const goManual = () => {
+    stopCamera();
+    navigate({
+      to: "/inventory/add",
+      search: { name: "", expiry: "", barcode: "", category: "", imageUrl: "" },
     });
   };
 
