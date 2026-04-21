@@ -214,70 +214,69 @@ function ScannerPage() {
     return () => stopCamera();
   }, [stopCamera]);
 
-  const captureForOCR = useCallback(async () => {
-    if (!videoRef.current) return;
-    const video = videoRef.current;
-    if (!video.videoWidth || !video.videoHeight) {
-      toast("Video not ready", { description: "Wait a moment and try again." });
-      return;
-    }
-
-    setStatus("ocr");
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      setStatus("scanning");
-      return;
-    }
-    ctx.drawImage(video, 0, 0);
-
-    try {
-      const { data } = await Tesseract.recognize(canvas, "eng");
-      const expiry = extractExpiryDate(data.text);
-      setResult((r) => ({ ...r, expiry: expiry ?? undefined, raw: data.text }));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "OCR failed");
-    } finally {
-      setStatus("result");
-      stopCamera();
-    }
-  }, [stopCamera]);
-
   const reset = useCallback(() => {
     stopCamera();
     setResult({});
+    setManualName("");
+    setExpiryDate(undefined);
+    setQuantity("1");
     setStatus("idle");
     setError(null);
   }, [stopCamera]);
 
-  const goAdd = () => {
-    stopCamera();
-    const expiryISO = result.expiry ? normalizeExpiryToISO(result.expiry) : "";
-    navigate({
-      to: "/inventory/add",
-      search: {
-        name: manualName || result.productName || "",
-        expiry: expiryISO,
-        barcode: result.barcode || "",
-        category: result.productCategory || "",
-        imageUrl: result.productImage || "",
-      },
-    });
-  };
-
   const goManual = () => {
     stopCamera();
     navigate({
-      to: "/inventory/add",
+      to: "/add-item",
       search: { name: "", expiry: "", barcode: "", category: "", imageUrl: "" },
     });
   };
 
+  const handleAdd = async () => {
+    if (!user) {
+      toast("Sign in required", { description: "Please sign in to add items." });
+      return;
+    }
+    const name = (manualName || result.productName || "").trim();
+    if (!name) {
+      toast("Name required", { description: "Enter a product name." });
+      return;
+    }
+    if (!expiryDate) {
+      toast("Expiry date required", { description: "Pick an expiry date before saving." });
+      return;
+    }
+    const qty = Number(quantity);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      toast("Invalid quantity", { description: "Enter a positive number." });
+      return;
+    }
+
+    try {
+      await addItem.mutateAsync({
+        name,
+        category: (result.productCategory as Category) || "Other",
+        quantity: qty,
+        unit: "pcs",
+        location: "Fridge",
+        expiresAt: expiryDate.toISOString(),
+        imageUrl: result.productImage || undefined,
+      });
+      toast.success("Item added", { description: `${name} is in your inventory.` });
+      navigate({
+        to: "/inventory",
+        search: { q: "", freshness: "all", category: "all", sort: "expiry" },
+      });
+    } catch (e) {
+      toast.error("Could not save", {
+        description: e instanceof Error ? e.message : "Try again.",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Scanner" description="Point your camera at a barcode or expiry date" />
+      <PageHeader title="Scanner" description="Scan a barcode, then enter the expiry date" />
 
       {status === "idle" && (
         <Card className="flex flex-col items-center gap-4 p-8 text-center">
@@ -287,7 +286,7 @@ function ScannerPage() {
           <div>
             <h2 className="text-base font-semibold text-foreground">Ready to scan</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Allow camera access to detect barcodes. Then capture expiry text with OCR.
+              Allow camera access to detect a barcode. You'll enter the expiry date afterwards.
             </p>
           </div>
           <Button onClick={startScanning} className="w-full max-w-xs">
@@ -301,10 +300,7 @@ function ScannerPage() {
         </Card>
       )}
 
-      {(status === "starting" ||
-        status === "scanning" ||
-        status === "ocr" ||
-        status === "lookup") && (
+      {(status === "starting" || status === "scanning" || status === "lookup") && (
         <Card className="overflow-hidden p-0">
           <div className="relative aspect-[3/4] bg-black">
             <video
@@ -334,13 +330,8 @@ function ScannerPage() {
             <p className="text-center text-xs text-muted-foreground">
               {status === "scanning" && "Searching for a barcode…"}
               {status === "starting" && "Starting camera…"}
-              {status === "ocr" && "Reading text…"}
               {status === "lookup" && "Looking up product…"}
             </p>
-            <Button variant="secondary" onClick={captureForOCR} disabled={status !== "scanning"}>
-              <Type className="h-4 w-4" />
-              Capture expiry text (OCR)
-            </Button>
           </div>
         </Card>
       )}
@@ -348,8 +339,10 @@ function ScannerPage() {
       {status === "result" && (
         <Card className="space-y-4 p-5">
           <div>
-            <h2 className="text-base font-semibold text-foreground">Scan result</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Review and add to your inventory.</p>
+            <h2 className="text-base font-semibold text-foreground">Confirm and add</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review the product, set an expiry date, and save it to your inventory.
+            </p>
           </div>
 
           <div className="grid gap-3">
@@ -379,22 +372,18 @@ function ScannerPage() {
                 </div>
               </div>
             )}
+
+            {result.barcode && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Barcode</Label>
+                <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-sm">
+                  {result.barcode}
+                </p>
+              </div>
+            )}
+
             <div>
-              <Label className="text-xs text-muted-foreground">Barcode</Label>
-              <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-sm">
-                {result.barcode ?? "Not detected"}
-              </p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Detected expiry</Label>
-              <p className="mt-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
-                {result.expiry ?? "—"}
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="manual-name" className="text-xs text-muted-foreground">
-                Item name
-              </Label>
+              <Label htmlFor="manual-name">Product name *</Label>
               <Input
                 id="manual-name"
                 value={manualName}
@@ -403,17 +392,71 @@ function ScannerPage() {
                 className="mt-1"
               />
             </div>
+
+            <div>
+              <Label>Expiry date *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "mt-1 w-full justify-start text-left font-normal",
+                      !expiryDate && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {expiryDate ? format(expiryDate, "PPP") : "Pick an expiry date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={expiryDate}
+                    onSelect={setExpiryDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div>
+              <Label htmlFor="scan-qty">Quantity</Label>
+              <Input
+                id="scan-qty"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.1"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className="mt-1"
+              />
+            </div>
           </div>
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={reset} className="flex-1">
+            <Button variant="outline" onClick={reset} className="flex-1" disabled={addItem.isPending}>
               <RefreshCw className="h-4 w-4" />
               Scan again
             </Button>
-            <Button onClick={goAdd} className="flex-1">
-              Add to inventory
+            <Button onClick={handleAdd} className="flex-1" disabled={addItem.isPending}>
+              {addItem.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Add to inventory"
+              )}
             </Button>
           </div>
+          {!user && (
+            <p className="text-center text-xs text-muted-foreground">
+              Sign in to save items to your inventory.
+            </p>
+          )}
         </Card>
       )}
 
@@ -426,6 +469,27 @@ function ScannerPage() {
           </Button>
         </Card>
       )}
+    </div>
+  );
+}
+
+function ScannerOverlay({ status }: { status: Status }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      <div className="relative h-48 w-64 rounded-2xl border-2 border-primary/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]">
+        <span className="absolute -left-0.5 -top-0.5 h-6 w-6 rounded-tl-2xl border-l-4 border-t-4 border-primary" />
+        <span className="absolute -right-0.5 -top-0.5 h-6 w-6 rounded-tr-2xl border-r-4 border-t-4 border-primary" />
+        <span className="absolute -bottom-0.5 -left-0.5 h-6 w-6 rounded-bl-2xl border-b-4 border-l-4 border-primary" />
+        <span className="absolute -bottom-0.5 -right-0.5 h-6 w-6 rounded-br-2xl border-b-4 border-r-4 border-primary" />
+        {status === "scanning" && (
+          <span className="absolute left-2 right-2 top-1/2 h-0.5 -translate-y-1/2 animate-pulse bg-primary" />
+        )}
+        {status === "lookup" && (
+          <span className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </span>
+        )}
+      </div>
     </div>
   );
 }
