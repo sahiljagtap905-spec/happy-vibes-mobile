@@ -1,8 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Route as AddItemRoute } from "./inventory.add";
+import { addItemRouteOptions } from "./inventory.add";
 
-export const Route = createFileRoute("/add-item")({
-  validateSearch: AddItemRoute.options.validateSearch,
-  head: AddItemRoute.options.head,
-  component: AddItemRoute.options.component,
-});
+// Dedicated alias route for manual entry — fully decoupled from /scanner.
+export const Route = createFileRoute("/add-item")(addItemRouteOptions);
