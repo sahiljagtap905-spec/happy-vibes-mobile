@@ -1,36 +1,22 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Clock, Users, Sparkles, Zap, Search, Loader2 } from "lucide-react";
+import { Sparkles, Zap, Search } from "lucide-react";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
-import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/ui-app/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { AISuggestionsPanel } from "@/components/ui-app/AISuggestionsPanel";
-import { supabase } from "@/integrations/supabase/client";
+import { RecipeDetailModal } from "@/components/ui-app/RecipeDetailModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useInventory } from "@/hooks/useInventory";
-import { useSuggestRecipes } from "@/hooks/useAISuggestions";
+import { useSuggestRecipes, type AISuggestedRecipe } from "@/hooks/useAISuggestions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-interface RecipeRow {
-  id: string;
-  title: string;
-  description: string;
-  image_emoji: string | null;
-  time_minutes: number;
-  servings: number;
-  difficulty: string;
-  tags: string[];
-}
-
 const searchSchema = z.object({
   q: fallback(z.string(), "").default(""),
-  tag: fallback(z.string(), "all").default("all"),
   business: fallback(z.boolean(), false).default(false),
 });
 
@@ -38,7 +24,7 @@ export const Route = createFileRoute("/recipes")({
   head: () => ({
     meta: [
       { title: "Recipes — Inventory Pulse" },
-      { name: "description", content: "Smart recipe ideas based on what you have at home." },
+      { name: "description", content: "Smart AI recipe ideas based on what you have at home." },
     ],
   }),
   validateSearch: zodValidator(searchSchema),
@@ -46,12 +32,14 @@ export const Route = createFileRoute("/recipes")({
 });
 
 function RecipesPage() {
-  const { q, tag, business } = Route.useSearch();
+  const { q, business } = Route.useSearch();
   const navigate = useNavigate({ from: "/recipes" });
   const { user } = useAuth();
   const { data: items = [] } = useInventory(user?.id);
   const suggest = useSuggestRecipes();
   const [showAI, setShowAI] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<AISuggestedRecipe | null>(null);
+  const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
 
   const runSuggest = () => {
     if (items.length === 0) {
@@ -62,23 +50,12 @@ function RecipesPage() {
     suggest.mutate({ items, mode: "general", businessMode: business });
   };
 
-  const { data: recipes = [], isLoading } = useQuery({
-    queryKey: ["recipes"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("recipes").select("*").order("title");
-      if (error) throw error;
-      return data as RecipeRow[];
-    },
-  });
+  const update = (next: Partial<{ q: string; business: boolean }>) =>
+    navigate({ search: (prev: { q: string; business: boolean }) => ({ ...prev, ...next }) });
 
-  const allTags = Array.from(new Set(recipes.flatMap((r) => r.tags))).sort();
-
-  const update = (next: Partial<{ q: string; tag: string; business: boolean }>) =>
-    navigate({ search: (prev: { q: string; tag: string; business: boolean }) => ({ ...prev, ...next }) });
-
-  const filtered = recipes.filter((r) => {
-    if (business && r.time_minutes > 15) return false;
-    if (tag !== "all" && !r.tags.includes(tag)) return false;
+  const aiRecipes = suggest.data ?? [];
+  const filtered = aiRecipes.filter((r) => {
+    if (business && r.timeMinutes > 15) return false;
     if (q && !r.title.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
   });
@@ -96,24 +73,13 @@ function RecipesPage() {
         }
       />
 
-      {showAI && (
-        <AISuggestionsPanel
-          recipes={suggest.data ?? []}
-          isLoading={suggest.isPending}
-          error={suggest.error ? (suggest.error as Error).message : null}
-          onRetry={runSuggest}
-          onDismiss={() => setShowAI(false)}
-          title="Recipes from your kitchen"
-        />
-      )}
-
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           aria-label="Search recipes"
           value={q}
           onChange={(e) => update({ q: e.target.value })}
-          placeholder="Search recipes"
+          placeholder="Search AI recipes"
           className="pl-9"
         />
       </div>
@@ -123,9 +89,7 @@ function RecipesPage() {
         onClick={() => update({ business: !business })}
         className={cn(
           "flex w-full items-center justify-between rounded-xl border p-3 text-left transition-colors",
-          business
-            ? "border-primary bg-primary/10"
-            : "border-border bg-card hover:bg-muted/40",
+          business ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-muted/40",
         )}
       >
         <div className="flex items-center gap-3">
@@ -157,74 +121,43 @@ function RecipesPage() {
         </span>
       </button>
 
-      {isLoading ? (
-        <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      {showAI ? (
+        <AISuggestionsPanel
+          recipes={filtered}
+          isLoading={suggest.isPending}
+          error={suggest.error ? (suggest.error as Error).message : null}
+          onRetry={runSuggest}
+          onDismiss={() => setShowAI(false)}
+          onRecipeClick={(r) => {
+            setSelectedRecipe(r);
+            setIsRecipeModalOpen(true);
+          }}
+          title="Recipes from your kitchen"
+          emptyHint="No recipes found based on your inventory"
+        />
       ) : (
-        <>
-          <div className="-mx-4 overflow-x-auto px-4">
-            <div className="flex gap-2 pb-1">
-              <TagChip active={tag === "all"} onClick={() => update({ tag: "all" })}>All</TagChip>
-              {allTags.map((t) => (
-                <TagChip key={t} active={tag === t} onClick={() => update({ tag: t })}>{t}</TagChip>
-              ))}
-            </div>
+        <Card className="space-y-3 p-8 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <Sparkles className="h-5 w-5 text-primary" />
           </div>
-
-          <p className="text-xs font-medium text-muted-foreground">
-            {filtered.length} {filtered.length === 1 ? "recipe" : "recipes"}
-          </p>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {filtered.map((r) => (
-              <Link key={r.id} to="/recipes/$recipeId" params={{ recipeId: r.id }} className="block">
-                <Card className="flex h-full gap-3 p-3 transition-colors hover:bg-muted/40">
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-muted text-3xl">
-                    {r.image_emoji ?? "🍽️"}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-foreground">{r.title}</p>
-                    <p className="line-clamp-2 text-xs text-muted-foreground">{r.description}</p>
-                    <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {r.time_minutes} min</span>
-                      <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" /> {r.servings}</span>
-                      <Badge variant="secondary" className="ml-auto text-[10px]">{r.difficulty}</Badge>
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            ))}
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-foreground">Get AI recipe ideas</p>
+            <p className="text-xs text-muted-foreground">
+              Tap “AI suggest” to generate recipes from your current inventory.
+            </p>
           </div>
-
-          {filtered.length === 0 && (
-            <Card className="p-8 text-center text-sm text-muted-foreground">No recipes match your filters.</Card>
-          )}
-        </>
+          <Button size="sm" onClick={runSuggest} disabled={suggest.isPending}>
+            <Sparkles className="h-4 w-4" />
+            Suggest recipes
+          </Button>
+        </Card>
       )}
+
+      <RecipeDetailModal
+        recipe={selectedRecipe}
+        open={isRecipeModalOpen}
+        onOpenChange={setIsRecipeModalOpen}
+      />
     </div>
-  );
-}
-
-function TagChip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-card text-foreground hover:bg-muted",
-      )}
-    >
-      {children}
-    </button>
   );
 }
