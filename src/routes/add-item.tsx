@@ -24,6 +24,6 @@ export const Route = createFileRoute("/add-item")({
 });
 
 function AddItemRoute() {
-  const search = Route.useSearch() as z.infer<typeof searchSchema>;
+  const search = Route.useSearch() as unknown as z.infer<typeof searchSchema>;
   return <AddItemForm prefill={search} />;
 }
