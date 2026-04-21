@@ -46,25 +46,31 @@ export function AddItemForm({ prefill }: { prefill: AddItemPrefill }) {
   const { user } = useAuth();
   const addItem = useAddItem(user?.id);
 
-  const [name, setName] = useState(prefill.name);
+  const prefillName = prefill.name ?? "";
+  const prefillExpiry = prefill.expiry ?? "";
+  const prefillBarcode = prefill.barcode ?? "";
+  const prefillCategory = prefill.category ?? "";
+  const prefillImageUrl = prefill.imageUrl ?? "";
+
+  const [name, setName] = useState(prefillName);
   const [category, setCategory] = useState<Category>(
-    (CATEGORIES as string[]).includes(prefill.category)
-      ? (prefill.category as Category)
+    (CATEGORIES as string[]).includes(prefillCategory)
+      ? (prefillCategory as Category)
       : "Other",
   );
   const [location, setLocation] = useState<Location>("Fridge");
   const [quantity, setQuantity] = useState<string>("1");
   const [unit, setUnit] = useState("pcs");
-  const [expiryDate, setExpiryDate] = useState<Date | undefined>(parseISODate(prefill.expiry));
-  const [notes, setNotes] = useState(prefill.barcode ? `Barcode: ${prefill.barcode}` : "");
+  const [expiryDate, setExpiryDate] = useState<Date | undefined>(parseISODate(prefillExpiry));
+  const [notes, setNotes] = useState(prefillBarcode ? `Barcode: ${prefillBarcode}` : "");
 
   useEffect(() => {
-    if (prefill.name) setName(prefill.name);
-  }, [prefill.name]);
+    if (prefillName) setName(prefillName);
+  }, [prefillName]);
   useEffect(() => {
-    const d = parseISODate(prefill.expiry);
+    const d = parseISODate(prefillExpiry);
     if (d) setExpiryDate(d);
-  }, [prefill.expiry]);
+  }, [prefillExpiry]);
 
   const canSave =
     !!user &&
