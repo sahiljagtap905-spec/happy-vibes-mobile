@@ -286,6 +286,10 @@ function ScannerPage() {
             <Camera className="h-4 w-4" />
             Start camera
           </Button>
+          <Button onClick={goManual} variant="outline" className="w-full max-w-xs">
+            <Type className="h-4 w-4" />
+            Enter manually
+          </Button>
         </Card>
       )}
 
