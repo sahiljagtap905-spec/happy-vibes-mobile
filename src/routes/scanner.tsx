@@ -439,12 +439,13 @@ function ScannerOverlay({ status }: { status: Status }) {
   );
 }
 
-// Tries common date formats: 12/05/2025, 12-05-2025, 2025-05-12, 12 May 2025, MAY 2025
+// Tries common date formats and returns the matched raw string.
 function extractExpiryDate(text: string): string | null {
   const cleaned = text.replace(/\s+/g, " ");
   const patterns = [
-    /\b(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})\b/,
-    /\b(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})\b/,
+    /\b(\d{4}[-/.]\d{1,2}[-/.]\d{1,2})\b/, // 2025-05-12
+    /\b(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})\b/, // 12/05/2025 or 12/05/25
+    /\b(\d{1,2}[-/.]\d{4})\b/, // 05/2025 (MM/YYYY)
     /\b(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})\b/i,
     /\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})\b/i,
   ];
@@ -453,4 +454,73 @@ function extractExpiryDate(text: string): string | null {
     if (m) return m[1];
   }
   return null;
+}
+
+const MONTHS: Record<string, number> = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+};
+
+// Normalize a detected expiry string to ISO (YYYY-MM-DD). Returns "" if invalid.
+export function normalizeExpiryToISO(raw: string): string {
+  if (!raw) return "";
+  const s = raw.trim();
+
+  // ISO YYYY-MM-DD or YYYY/MM/DD
+  let m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (m) return buildISO(+m[1], +m[2], +m[3]);
+
+  // DD/MM/YYYY (assume non-US)
+  m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+  if (m) {
+    let y = +m[3];
+    if (y < 100) y += 2000;
+    return buildISO(y, +m[2], +m[1]);
+  }
+
+  // MM/YYYY -> last day of month
+  m = s.match(/^(\d{1,2})[-/.](\d{4})$/);
+  if (m) {
+    const month = +m[1];
+    const year = +m[2];
+    if (month < 1 || month > 12) return "";
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    return buildISO(year, month, lastDay);
+  }
+
+  // 12 May 2025
+  m = s.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{2,4})$/);
+  if (m) {
+    const month = MONTHS[m[2].slice(0, 3).toLowerCase()];
+    if (month === undefined) return "";
+    let y = +m[3];
+    if (y < 100) y += 2000;
+    return buildISO(y, month + 1, +m[1]);
+  }
+
+  // May 2025 -> last day of month
+  m = s.match(/^([A-Za-z]+)\s+(\d{2,4})$/);
+  if (m) {
+    const month = MONTHS[m[1].slice(0, 3).toLowerCase()];
+    if (month === undefined) return "";
+    let y = +m[2];
+    if (y < 100) y += 2000;
+    const lastDay = new Date(Date.UTC(y, month + 1, 0)).getUTCDate();
+    return buildISO(y, month + 1, lastDay);
+  }
+
+  return "";
+}
+
+function buildISO(year: number, month: number, day: number): string {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return "";
+  const d = new Date(Date.UTC(year, month - 1, day));
+  if (
+    d.getUTCFullYear() !== year ||
+    d.getUTCMonth() !== month - 1 ||
+    d.getUTCDate() !== day
+  ) {
+    return "";
+  }
+  return d.toISOString();
 }
