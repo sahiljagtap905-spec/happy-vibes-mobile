@@ -23,6 +23,6 @@ export const Route = createFileRoute("/inventory/add")({
 });
 
 function AddItemRoute() {
-  const search = Route.useSearch();
+  const search = Route.useSearch() as z.infer<typeof searchSchema>;
   return <AddItemForm prefill={search} />;
 }
