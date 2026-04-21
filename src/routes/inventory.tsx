@@ -68,7 +68,12 @@ function InventoryPage() {
           <Button
             size="sm"
             className="gap-1"
-            onClick={() => navigate({ to: "/scanner" })}
+            onClick={() =>
+              navigate({
+                to: "/inventory/add",
+                search: { name: "", expiry: "", barcode: "", category: "", imageUrl: "" },
+              })
+            }
           >
             <Plus className="h-4 w-4" />
             Add
