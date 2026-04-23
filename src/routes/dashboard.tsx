@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Package, AlertTriangle, PiggyBank, ScanLine, Plus, ChefHat, Sparkles } from "lucide-react";
+import { Package, AlertTriangle, ScanLine, Plus, ChefHat, Sparkles } from "lucide-react";
 import { FreshnessGauge } from "@/components/ui-app/FreshnessGauge";
 import { StatCard } from "@/components/ui-app/StatCard";
 import { QuickActionButton } from "@/components/ui-app/QuickActionButton";
@@ -85,10 +85,9 @@ function DashboardPage() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <StatCard label="Total" value={items.length} icon={Package} />
         <StatCard label="Expiring" value={urgent + warning} icon={AlertTriangle} tone="warning" />
-        <StatCard label="Saved" value="$48" icon={PiggyBank} tone="fresh" trend="this month" />
       </div>
 
       <div>
