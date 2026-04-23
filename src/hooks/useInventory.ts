@@ -84,6 +84,21 @@ export function useDeleteItem(userId: string | undefined) {
   });
 }
 
+export function useUpdateItem(userId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (patch: { id: string; name?: string; quantity?: number; expiresAt?: string }) => {
+      const update: Record<string, unknown> = {};
+      if (patch.name !== undefined) update.name = patch.name;
+      if (patch.quantity !== undefined) update.quantity = patch.quantity;
+      if (patch.expiresAt !== undefined) update.expires_at = patch.expiresAt;
+      const { error } = await supabase.from("inventory_items").update(update).eq("id", patch.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inventory", userId] }),
+  });
+}
+
 export function useAddItem(userId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
