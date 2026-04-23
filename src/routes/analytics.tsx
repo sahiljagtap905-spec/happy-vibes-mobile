@@ -28,31 +28,11 @@ export const Route = createFileRoute("/analytics")({
   component: AnalyticsPage,
 });
 
-const wasteByMonth = [
-  { month: "Jan", waste: 6.2, used: 28 },
-  { month: "Feb", waste: 5.4, used: 30 },
-  { month: "Mar", waste: 4.8, used: 32 },
-  { month: "Apr", waste: 3.9, used: 35 },
-  { month: "May", waste: 3.2, used: 38 },
-  { month: "Jun", waste: 2.4, used: 41 },
-];
+const wasteByMonth: Array<{ month: string; waste: number; used: number }> = [];
 
-const savings = [
-  { month: "Jan", value: 24 },
-  { month: "Feb", value: 32 },
-  { month: "Mar", value: 41 },
-  { month: "Apr", value: 36 },
-  { month: "May", value: 48 },
-  { month: "Jun", value: 58 },
-];
+const savings: Array<{ month: string; value: number }> = [];
 
-const categoryUsage = [
-  { name: "Produce", value: 38, color: "var(--color-fresh)" },
-  { name: "Dairy", value: 22, color: "var(--color-chart-4)" },
-  { name: "Meat", value: 14, color: "var(--color-urgent)" },
-  { name: "Pantry", value: 18, color: "var(--color-warning)" },
-  { name: "Other", value: 8, color: "var(--color-chart-5)" },
-];
+const categoryUsage: Array<{ name: string; value: number; color: string }> = [];
 
 function AnalyticsPage() {
   return (
