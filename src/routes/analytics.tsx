@@ -43,9 +43,9 @@ function AnalyticsPage() {
       />
 
       <div className="grid grid-cols-3 gap-3">
-        <StatCard label="Waste" value="2.4 kg" icon={Trash2} tone="warning" trend="-23%" />
-        <StatCard label="Saved" value="$58" icon={PiggyBank} tone="fresh" trend="+21%" />
-        <StatCard label="Usage" value="92%" icon={TrendingDown} trend="this month" />
+        <StatCard label="Waste" value="0 kg" icon={Trash2} tone="warning" />
+        <StatCard label="Saved" value="$0" icon={PiggyBank} tone="fresh" />
+        <StatCard label="Usage" value="0%" icon={TrendingDown} />
       </div>
 
       <Card className="space-y-3 p-4">
