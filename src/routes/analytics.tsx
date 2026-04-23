@@ -136,7 +136,7 @@ function AnalyticsPage() {
         <div className="text-xs text-foreground">
           <p className="font-semibold">Insight</p>
           <p className="mt-0.5 text-muted-foreground">
-            You've cut waste by 23% this month — keep using up produce within 5 days of buying.
+            Insights will appear here once you start tracking inventory activity.
           </p>
         </div>
       </Card>
