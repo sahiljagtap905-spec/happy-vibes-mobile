@@ -27,6 +27,7 @@ interface NotifRow {
   body: string | null;
   read: boolean;
   created_at: string;
+  related_item_id: string | null;
 }
 
 const typeMeta: Record<string, { icon: typeof Bell; tone: string }> = {
@@ -34,6 +35,17 @@ const typeMeta: Record<string, { icon: typeof Bell; tone: string }> = {
   restock: { icon: ShoppingBag, tone: "bg-warning/20 text-warning-foreground" },
   recipe: { icon: ChefHat, tone: "bg-primary/15 text-primary" },
 };
+
+type Bucket = "This Week" | "This Month" | "Earlier";
+
+function bucketFor(dateStr: string): Bucket {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffDays = (now.getTime() - date.getTime()) / 86_400_000;
+  if (diffDays <= 7) return "This Week";
+  if (date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()) return "This Month";
+  return "Earlier";
+}
 
 function NotificationsPage() {
   const { user } = useAuth();
@@ -63,10 +75,20 @@ function NotificationsPage() {
 
   const unread = alerts.filter((a) => !a.read).length;
 
+  const grouped = alerts.reduce<Record<Bucket, NotifRow[]>>(
+    (acc, a) => {
+      acc[bucketFor(a.created_at)].push(a);
+      return acc;
+    },
+    { "This Week": [], "This Month": [], Earlier: [] },
+  );
+  const sections: Bucket[] = ["This Week", "This Month", "Earlier"];
+
   const markAll = async () => {
     if (!user) return;
     await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
     qc.invalidateQueries({ queryKey: ["notifications", user.id] });
+    qc.invalidateQueries({ queryKey: ["notifications-unread", user.id] });
   };
 
   const updatePref = async (key: keyof typeof prefs, value: boolean) => {
@@ -84,8 +106,10 @@ function NotificationsPage() {
       <PageHeader
         title="Notifications"
         description={unread ? `${unread} unread` : "All caught up"}
-        action={unread > 0 ? (
-          <Button size="sm" variant="ghost" onClick={markAll}><CheckCheck className="h-4 w-4" />Mark all read</Button>
+        action={alerts.length > 0 ? (
+          <Button size="sm" variant="ghost" onClick={markAll} disabled={unread === 0}>
+            <CheckCheck className="h-4 w-4" />Mark all as read
+          </Button>
         ) : undefined}
       />
 
@@ -126,29 +150,40 @@ function NotificationsPage() {
       {alerts.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">No notifications yet.</Card>
       ) : (
-        <Card className="divide-y divide-border p-0">
-          {alerts.map((a) => {
-            const meta = typeMeta[a.type] ?? typeMeta.recipe;
-            const Icon = meta.icon;
-            return (
-              <div key={a.id} className="flex items-start gap-3 px-4 py-3">
-                <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", meta.tone)}>
-                  <Icon className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <p className="truncate text-sm font-medium text-foreground">{a.title}</p>
-                    {!a.read && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
-                  </div>
-                  {a.body && <p className="truncate text-xs text-muted-foreground">{a.body}</p>}
-                </div>
-                <span className="shrink-0 text-[10px] text-muted-foreground">
-                  {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
-                </span>
-              </div>
-            );
-          })}
-        </Card>
+        <div className="space-y-4">
+          {sections.map((section) =>
+            grouped[section].length === 0 ? null : (
+              <section key={section}>
+                <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {section}
+                </h2>
+                <Card className="divide-y divide-border p-0">
+                  {grouped[section].map((a) => {
+                    const meta = typeMeta[a.type] ?? typeMeta.recipe;
+                    const Icon = meta.icon;
+                    return (
+                      <div key={a.id} className="flex items-start gap-3 px-4 py-3">
+                        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", meta.tone)}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-2">
+                            <p className="truncate text-sm font-medium text-foreground">{a.title}</p>
+                            {!a.read && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+                          </div>
+                          {a.body && <p className="truncate text-xs text-muted-foreground">{a.body}</p>}
+                        </div>
+                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </Card>
+              </section>
+            ),
+          )}
+        </div>
       )}
 
       <section>

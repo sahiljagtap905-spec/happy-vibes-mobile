@@ -77,10 +77,16 @@ export function useDeleteItem(userId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      // Remove any notifications tied to this item first so they disappear from the bell.
+      await supabase.from("notifications").delete().eq("related_item_id", id);
       const { error } = await supabase.from("inventory_items").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["inventory", userId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inventory", userId] });
+      qc.invalidateQueries({ queryKey: ["notifications", userId] });
+      qc.invalidateQueries({ queryKey: ["notifications-unread", userId] });
+    },
   });
 }
 
