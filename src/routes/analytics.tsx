@@ -99,37 +99,34 @@ function AnalyticsPage() {
 
       <Card className="space-y-3 p-4">
         <h2 className="text-sm font-semibold text-foreground">Usage by category</h2>
-        <div className="flex items-center gap-3">
-          <div className="h-40 w-40 shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={categoryUsage}
-                  dataKey="value"
-                  innerRadius={36}
-                  outerRadius={60}
-                  paddingAngle={2}
-                >
-                  {categoryUsage.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+        {categoryUsage.length === 0 ? (
+          <div className="flex h-32 items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+            No data yet
           </div>
-          <ul className="flex-1 space-y-1.5">
-            {categoryUsage.map((c) => (
-              <li key={c.name} className="flex items-center gap-2 text-xs">
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: c.color }}
-                />
-                <span className="flex-1 text-foreground">{c.name}</span>
-                <span className="font-medium text-muted-foreground">{c.value}%</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <div className="h-40 w-40 shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={categoryUsage} dataKey="value" innerRadius={36} outerRadius={60} paddingAngle={2}>
+                    {categoryUsage.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <ul className="flex-1 space-y-1.5">
+              {categoryUsage.map((c) => (
+                <li key={c.name} className="flex items-center gap-2 text-xs">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c.color }} />
+                  <span className="flex-1 text-foreground">{c.name}</span>
+                  <span className="font-medium text-muted-foreground">{c.value}%</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </Card>
 
       <Card className="flex items-start gap-3 border-primary/30 bg-primary/5 p-4">
