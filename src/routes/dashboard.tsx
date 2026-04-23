@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Package, AlertTriangle, PiggyBank, ScanLine, Plus, ChefHat, Sparkles } from "lucide-react";
+import { Package, AlertTriangle, ScanLine, Plus, ChefHat, Sparkles } from "lucide-react";
 import { FreshnessGauge } from "@/components/ui-app/FreshnessGauge";
 import { StatCard } from "@/components/ui-app/StatCard";
 import { QuickActionButton } from "@/components/ui-app/QuickActionButton";
