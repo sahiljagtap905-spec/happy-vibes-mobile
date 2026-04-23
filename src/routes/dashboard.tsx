@@ -85,10 +85,9 @@ function DashboardPage() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <StatCard label="Total" value={items.length} icon={Package} />
         <StatCard label="Expiring" value={urgent + warning} icon={AlertTriangle} tone="warning" />
-        <StatCard label="Saved" value="$48" icon={PiggyBank} tone="fresh" trend="this month" />
       </div>
 
       <div>
