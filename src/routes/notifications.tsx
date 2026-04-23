@@ -150,29 +150,40 @@ function NotificationsPage() {
       {alerts.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">No notifications yet.</Card>
       ) : (
-        <Card className="divide-y divide-border p-0">
-          {alerts.map((a) => {
-            const meta = typeMeta[a.type] ?? typeMeta.recipe;
-            const Icon = meta.icon;
-            return (
-              <div key={a.id} className="flex items-start gap-3 px-4 py-3">
-                <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", meta.tone)}>
-                  <Icon className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <p className="truncate text-sm font-medium text-foreground">{a.title}</p>
-                    {!a.read && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
-                  </div>
-                  {a.body && <p className="truncate text-xs text-muted-foreground">{a.body}</p>}
-                </div>
-                <span className="shrink-0 text-[10px] text-muted-foreground">
-                  {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
-                </span>
-              </div>
-            );
-          })}
-        </Card>
+        <div className="space-y-4">
+          {sections.map((section) =>
+            grouped[section].length === 0 ? null : (
+              <section key={section}>
+                <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {section}
+                </h2>
+                <Card className="divide-y divide-border p-0">
+                  {grouped[section].map((a) => {
+                    const meta = typeMeta[a.type] ?? typeMeta.recipe;
+                    const Icon = meta.icon;
+                    return (
+                      <div key={a.id} className="flex items-start gap-3 px-4 py-3">
+                        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", meta.tone)}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-2">
+                            <p className="truncate text-sm font-medium text-foreground">{a.title}</p>
+                            {!a.read && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
+                          </div>
+                          {a.body && <p className="truncate text-xs text-muted-foreground">{a.body}</p>}
+                        </div>
+                        <span className="shrink-0 text-[10px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </Card>
+              </section>
+            ),
+          )}
+        </div>
       )}
 
       <section>
