@@ -1,25 +1,37 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { z } from "zod";
-import { Plus, ScanLine } from "lucide-react";
+import { Plus, ScanLine, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/ui-app/PageHeader";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { InventorySearch } from "@/components/inventory/InventorySearch";
 import { InventoryFilters } from "@/components/inventory/InventoryFilters";
 import { InventorySortMenu } from "@/components/inventory/InventorySortMenu";
 import { InventoryItemCard } from "@/components/inventory/InventoryItemCard";
 import { InventoryEmptyState } from "@/components/inventory/InventoryEmptyState";
+import { EditItemDialog } from "@/components/inventory/EditItemDialog";
 import {
   CATEGORIES,
   filterItems,
   sortItems,
   type FreshnessFilter,
+  type InventoryItem,
   type SortKey,
 } from "@/lib/inventory-data";
 import { useAuth } from "@/hooks/useAuth";
-import { useInventory } from "@/hooks/useInventory";
-import { Loader2 } from "lucide-react";
+import { useDeleteItem, useInventory } from "@/hooks/useInventory";
 
 const searchSchema = z.object({
   q: fallback(z.string(), "").default(""),
@@ -47,6 +59,10 @@ function InventoryPage() {
   const navigate = useNavigate({ from: "/inventory" });
   const { user } = useAuth();
   const { data: rawItems = [], isLoading } = useInventory(user?.id);
+  const deleteItem = useDeleteItem(user?.id);
+  const [editing, setEditing] = useState<InventoryItem | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleting, setDeleting] = useState<InventoryItem | null>(null);
 
   const items = useMemo(
     () => sortItems(filterItems(rawItems, { q, freshness, category }), sort),
@@ -120,10 +136,50 @@ function InventoryPage() {
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
-            <InventoryItemCard key={item.id} item={item} />
+            <InventoryItemCard
+              key={item.id}
+              item={item}
+              onEdit={(it) => {
+                setEditing(it);
+                setEditOpen(true);
+              }}
+              onDelete={(it) => setDeleting(it)}
+            />
           ))}
         </div>
       )}
+
+      <EditItemDialog item={editing} open={editOpen} onOpenChange={setEditOpen} />
+
+      <AlertDialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleting ? `"${deleting.name}" will be permanently removed from your inventory.` : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteItem.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteItem.isPending}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!deleting) return;
+                try {
+                  await deleteItem.mutateAsync(deleting.id);
+                  toast.success("Item deleted");
+                  setDeleting(null);
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : "Failed to delete item");
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

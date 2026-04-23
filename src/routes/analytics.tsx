@@ -44,7 +44,7 @@ function AnalyticsPage() {
 
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="Waste" value="0 kg" icon={Trash2} tone="warning" />
-        <StatCard label="Saved" value="$0" icon={PiggyBank} tone="fresh" />
+        <StatCard label="Saved" value="₹0" icon={PiggyBank} tone="fresh" />
         <StatCard label="Usage" value="0%" icon={TrendingDown} />
       </div>
 
@@ -75,7 +75,7 @@ function AnalyticsPage() {
 
       <Card className="space-y-3 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Money saved ($)</h2>
+          <h2 className="text-sm font-semibold text-foreground">Money saved (₹)</h2>
           <span className="text-[10px] text-muted-foreground">Trend</span>
         </div>
         <div className="h-48">

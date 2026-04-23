@@ -88,7 +88,7 @@ export function useUpdateItem(userId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (patch: { id: string; name?: string; quantity?: number; expiresAt?: string }) => {
-      const update: Record<string, unknown> = {};
+      const update: { name?: string; quantity?: number; expires_at?: string } = {};
       if (patch.name !== undefined) update.name = patch.name;
       if (patch.quantity !== undefined) update.quantity = patch.quantity;
       if (patch.expiresAt !== undefined) update.expires_at = patch.expiresAt;
